@@ -1,5 +1,5 @@
 /* Levo · service worker: avisos push y funcionamiento sin conexión (red primero, caché si no hay red) */
-const CACHE = "levo-v3";
+const CACHE = "levo-v4";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", e => {
