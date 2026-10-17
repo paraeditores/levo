@@ -231,6 +231,9 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:370px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.areas{grid-template-columns:repeat(2,1fr)}}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="levo.css">
 </head>
 <body>
 <main class="wrap">
@@ -297,7 +300,7 @@ body:not([data-tab="hoy"]) .dchip{display:none}
   <div class="tab" id="tab-casa" hidden>
     <div id="roomSlotCasa"></div>
     <p class="roomnote" id="roomNote"></p>
-    <div class="foot"><button class="ghost" id="editLook">✏️ Editar personaje</button><button class="ghost" id="hardToggle"></button></div>
+    <div class="foot"><button class="ghost" id="editLook">✏️ Editar personaje</button><button class="ghost" id="hardToggle"></button><button class="ghost sndbtn" id="sndBtn"></button></div>
     <section class="amplia" id="amplia"></section>
     <h2 class="sec">Tienda</h2>
     <div class="seg" role="tablist">
@@ -472,8 +475,8 @@ function render(){
     const h3=document.createElement("h3");h3.innerHTML=`<span>${l}</span><span>${hs.filter(h=>done[h.id]).length}/${hs.length}</span>`;g.append(h3);
     hs.forEach(h=>{
       const row=document.createElement("div");row.className="row";
-      const b=document.createElement("button");b.className="habit";b.setAttribute("aria-pressed",!!done[h.id]);
-      b.innerHTML=`<span class="box"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 5"/></svg></span><span class="name"></span><span class="xpf">+10</span>`;b.querySelector(".name").textContent=h.name;
+      const b=document.createElement("button");b.className="habit";b.dataset.id=h.id;b.setAttribute("aria-pressed",!!done[h.id]);
+      b.innerHTML=`<span class="hico"><img alt="" src="${window.habitIcon?habitIcon(h):""}"></span><span class="name"></span><span class="box"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 5"/></svg></span>`;b.querySelector(".name").textContent=h.name;
       b.onclick=()=>toggle(h,b);row.append(b);
       if(editing){const x=document.createElement("button");x.className="del";x.textContent="Quitar";x.setAttribute("aria-label","Quitar "+h.name);x.onclick=()=>removeHabit(h);row.append(x)}
       g.append(row)});
@@ -490,8 +493,7 @@ function toggle(h,el){
   days={...days,[k]:{done:cur}};
   render();
   const after=frac(k);
-  if(on&&!still){const btn=[...document.querySelectorAll(".habit")].find(b=>b.querySelector(".name").textContent===h.name);if(btn){const f=document.createElement("span");f.className="float";f.textContent="+10";btn.append(f);setTimeout(()=>f.remove(),900)}}
-  if(on&&((before<.6&&after>=.6)||(before<1&&after===1)))burst($("rings"));
+  if(window.onToggle)onToggle(h,on,before,after,k);
   write(()=>sb.from("days").upsert({user_id:uid,day:k,done:cur,updated_at:new Date().toISOString()},{onConflict:"user_id,day"}));
 }
 function removeHabit(h){habits=habits.filter(x=>x.id!==h.id);render();write(()=>sb.from("habits").update({active:false}).eq("id",h.id))}
@@ -571,5 +573,6 @@ render();
 <script src="share.js"></script>
 <script src="friends.js"></script>
 <script src="ux.js"></script>
+<script src="juice.js"></script>
 </body>
 </html>

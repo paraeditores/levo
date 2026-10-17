@@ -262,7 +262,7 @@ function freeTiles() {
 }
 
 /* Caminar por la habitación */
-const me = { x: 3.2, y: 3.2, tx: 3.2, ty: 3.2, wait: 2, step: 0, wave: 0 };
+const me = { x: 3.2, y: 3.2, tx: 3.2, ty: 3.2, wait: 2, step: 0, wave: 0, jump: 0 };
 const FREE = [[3.2, 3.2]]; /* compatibilidad con visitas: se rellena en cada paseo */
 function walkTick(dt) {
   const still2 = mood === "enfermo" || mood === "agotado" || editing2;
@@ -302,7 +302,7 @@ function drawRoom(cv) {
   if (editing2 && selected2 && ANCH[selected2]) { const [px, py] = posOf(selected2), a = ANCH[selected2]; poly(x, [P(px, py), P(px + a[2], py), P(px + a[2], py + a[3]), P(px, py + a[3])], "rgba(255,214,10,.45)", "#ffd60a") }
   const list = items.filter(id => !FURN[id].w && !FURN[id].f).map(id => { const [ox, oy] = offOf(id); return { d: FURN[id].d + ox + oy, draw: () => withOff(id, () => FURN[id].draw(x)) } });
   const fr = (me.wait > 0) ? 0 : (Math.floor(me.step) % 2 ? 1 : 2);
-  list.push({ d: me.x + me.y, draw: () => { const [ax, ay] = P(me.x, me.y); drawAvatar(x, ax, ay, outfit, mood, blink, fr, me.wave > 0) } });
+  list.push({ d: me.x + me.y, draw: () => { const [ax, ay] = P(me.x, me.y), jy = me.jump > 0 ? Math.round(Math.sin((1 - me.jump / .5) * Math.PI) * 9) : 0; drawAvatar(x, ax, ay - jy, outfit, mood, blink, jy ? 1 : fr, me.wave > 0 || jy > 0) } });
   if (bongoUnlocked()) { const bpos = freeTiles().slice(-1)[0] || [4.4, 3.6]; const bp = window._ownSet ? [4.4, 3.6] : (window._bongoPos = window._bongoPos && Math.random() > .002 ? window._bongoPos : bpos); list.push({ d: bp[0] + bp[1], draw: () => { const [bx, by] = P(bp[0], bp[1]); drawBongo(x, bx - 14, by - 20) } }) }
   list.sort((a, b) => a.d - b.d).forEach(o => o.draw());
   if (window.roomExtras) roomExtras(x);
@@ -315,7 +315,7 @@ function placeBubble() {
   const [ax, ay] = P(me.x, me.y), k = cv.clientWidth / cv.width;
   b.style.left = Math.max(8, Math.min(cv.clientWidth - b.offsetWidth - 8, ax * k - b.offsetWidth / 2)) + "px";
   b.style.top = Math.max(6, (ay - 44) * k - b.offsetHeight) + "px";
-  const t = $("say").textContent; if (b.dataset.t !== t) { b.dataset.t = t; b.querySelector("span").textContent = t }
+  const t = window._sayOverride && window._sayOverride.until > Date.now() ? window._sayOverride.text : $("say").textContent; if (b.dataset.t !== t) { b.dataset.t = t; b.querySelector("span").textContent = t }
 }
 
 /* ---------- Mover muebles ---------- */
@@ -355,7 +355,7 @@ if ($("moveBtn")) $("moveBtn").onclick = () => setEditing(!editing2);
 let lastT = performance.now();
 function loop(t) {
   const dt = Math.min(.1, (t - lastT) / 1000); lastT = t;
-  walkTick(dt); if (me.wave > 0) me.wave -= dt;
+  walkTick(dt); if (me.wave > 0) me.wave -= dt; if (me.jump > 0) me.jump -= dt;
   if (document.visibilityState === "visible") { drawRoom($("room")); placeBubble() }
   requestAnimationFrame(loop);
 }
