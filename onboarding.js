@@ -14,6 +14,7 @@ const PRESETS = [
 const HS = [["corto", "Corto"], ["rapado", "Rapado"], ["largo", "Largo"], ["rizado", "Rizado"], ["calvo", "Calvo"]];
 const BEARDS = [["no", "Sin barba"], ["corta", "Corta"], ["completa", "Completa"]];
 const GLASSES = [["no", "Sin gafas"], ["pasta", "De pasta"], ["sol", "De sol"]];
+const BUILDS = [["delgado", "Delgado"], ["medio", "Medio"], ["fuerte", "Fuerte"], ["robusto", "Robusto"]];
 const ob = { open: false, step: 0, steps: [], look: {}, picks: new Set(), hard: false, edit: false, demo: false, wave: 0 };
 
 const obCss = document.createElement("style");
@@ -137,8 +138,8 @@ function draw() {
       w.append(g);
     };
     $("obName").value = ob.name || ""; $("obName").oninput = e => { ob.name = e.target.value.trim() };
-    group("Piel", SKINS, "skin", true); group("Peinado", HS, "hs"); group("Color de pelo", HAIRS, "hc", true); group("Barba", BEARDS, "beard"); group("Gafas", GLASSES, "glasses");
-    $("obDice").onclick = () => { const r = a => Math.floor(Math.random() * a); ob.look = { skin: r(SKINS.length), hs: HS[r(HS.length)][0], hc: r(HAIRS.length), beard: BEARDS[r(3)][0], glasses: GLASSES[r(3)][0] }; ob.wave = 1.2; draw() };
+    group("Piel", SKINS, "skin", true); group("Complexión", BUILDS, "build"); group("Peinado", HS, "hs"); group("Color de pelo", HAIRS, "hc", true); group("Barba", BEARDS, "beard"); group("Gafas", GLASSES, "glasses");
+    $("obDice").onclick = () => { const r = a => Math.floor(Math.random() * a); ob.look = { skin: r(SKINS.length), hs: HS[r(HS.length)][0], hc: r(HAIRS.length), beard: BEARDS[r(3)][0], glasses: GLASSES[r(3)][0], build: BUILDS[r(4)][0] }; ob.wave = 1.2; draw() };
     next.textContent = ob.edit ? "Siguiente" : "Este soy yo";
   }
   if (s === "habitos") {

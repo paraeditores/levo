@@ -143,7 +143,7 @@ function renderRescue() {
 const OUT = "#1b1b1f";
 const SKINS = ["#f6cfae", "#eab38c", "#c98b5f", "#9a6440", "#6b4329"];
 const HAIRS = ["#2a1c14", "#5b3a22", "#a8692e", "#e3b25b", "#c43c2c", "#1f2a52", "#e9e9ee"];
-const LOOK_DEF = { skin: 0, hs: "corto", hc: 0, beard: "no", glasses: "no" };
+const LOOK_DEF = { skin: 0, hs: "corto", hc: 0, beard: "no", glasses: "no", build: "medio" };
 const STAGES = [[1, "Novato", "141,141,153"], [3, "Aprendiz", "100,210,255"], [6, "Constante", "48,209,88"], [10, "Imparable", "255,159,10"], [15, "Maestro", "191,90,242"], [20, "Leyenda", "245,196,81"]];
 function stageOf(lv) { let i = 0; STAGES.forEach((s, k) => { if (lv >= s[0]) i = k }); return { i, name: STAGES[i][1], rgb: STAGES[i][2], c: `rgb(${STAGES[i][2]})`, next: STAGES[i + 1] || null } }
 function areaRate(area, n = 14) { let t = 0, k = 0; for (let o = -1; o >= -n; o--) { const d = dayKey(o); if (d < START) break; k++; t += frac(d, area) } return k >= 3 ? t / k : 0 }
@@ -161,7 +161,8 @@ function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wav
   const pant = (ALL.find(r => r.id === o.pant) || {}).c || "#2d3a5a";
   const shoe = (ALL.find(r => r.id === o.zapas) || {}).c || "#3a3a3c";
   const L = Math.round(fx - 7), T = Math.round(fy - 36), ev = o._evo || null, fit = !!(ev && ev.fit);
-  const bx = fit ? 2 : 3, bw = fit ? 11 : 9, ab = fit ? 0 : 1, af = fit ? 13 : 12, aw = fit ? 3 : 2;
+  const strong = fit || lk.build === "fuerte" || lk.build === "robusto";
+  const bw = lk.build === "robusto" ? 12 : strong ? 11 : lk.build === "delgado" ? 8 : 9, bx = bw >= 11 ? 2 : 3, ab = bw >= 11 ? 0 : 1, af = bx + bw, aw = strong ? 3 : 2;
   // sombra
   x.fillStyle = "rgba(0,0,0,.28)"; x.beginPath(); x.ellipse(fx, fy, 8, 3, 0, 0, Math.PI * 2); x.fill();
   if (o.aura || (ev && ev.st >= 1)) { const col = o.aura ? "255,214,10" : STAGES[ev.st][2], al = o.aura ? .6 : .16 + ev.st * .07; const g = x.createRadialGradient(fx, fy - 18, 3, fx, fy - 18, 22); g.addColorStop(0, `rgba(${col},${al})`); g.addColorStop(1, `rgba(${col},0)`); x.fillStyle = g; x.fillRect(fx - 24, fy - 42, 48, 48) }
@@ -170,12 +171,12 @@ function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wav
   orect(x, L + 4, T + 27 + lu, 3, 7, pant); orect(x, L + 8, T + 27 + ru, 3, 7, pant);
   orect(x, L + 3, T + 33 + lu, 4, 2, shoe); orect(x, L + 8, T + 33 + ru, 4, 2, shoe);
   // brazo de atrás, cuerpo y brazo de delante
-  orect(x, L + ab, T + 17, aw, 8, top); rect(x, L + ab, fit ? T + 20 : T + 24, aw, fit ? 6 : 2, skin);
+  orect(x, L + ab, T + 17, aw, 8, top); rect(x, L + ab, strong ? T + 20 : T + 24, aw, strong ? 6 : 2, skin);
   orect(x, L + bx, T + 16, bw, 12, top); rect(x, L + bx, T + 25, bw, 3, shade(top.startsWith("#") ? top : "#888888", .82));
   if (o.top === "capa-vampiro") { rect(x, L + bx, T + 16, bw, 2, "#c81e1e"); rect(x, L + bx + 3, T + 18, 3, 1, "#c81e1e") }
   if (o.top === "jersey-navidad") { [[1, 19], [4, 21], [7, 19], [2, 23], [6, 23]].forEach(([a, b]) => rect(x, L + bx + a, T + b, 1, 1, "#ffffff")); rect(x, L + bx, T + 25, bw, 1, "#2fb344") }
   if (o.cadena) { rect(x, L + 5, T + 17, 1, 2, "#ffd60a"); rect(x, L + 6, T + 19, 3, 1, "#ffd60a"); rect(x, L + 9, T + 17, 1, 2, "#ffd60a") }
-  if (wave) { orect(x, L + af, T + 9, aw, 8, top); rect(x, L + af, T + 7, aw, fit ? 5 : 2, skin) } else { orect(x, L + af, T + 17, aw, 8, top); rect(x, L + af, fit ? T + 20 : T + 24, aw, fit ? 6 : 2, skin) }
+  if (wave) { orect(x, L + af, T + 9, aw, 8, top); rect(x, L + af, T + 7, aw, strong ? 5 : 2, skin) } else { orect(x, L + af, T + 17, aw, 8, top); rect(x, L + af, strong ? T + 20 : T + 24, aw, strong ? 6 : 2, skin) }
   // cabeza grande (vista 3/4)
   orect(x, L + 1, T + 3, 13, 13, skin); rect(x, L + 1, T + 13, 13, 3, skinD); rect(x, L + 6, T + 15, 4, 1, skinD);
   rect(x, L + 0, T + 8, 1, 3, skin); rect(x, L - 1, T + 8, 1, 3, OUT); // oreja

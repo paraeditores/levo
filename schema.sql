@@ -49,3 +49,9 @@ create policy nudges_ins on nudges for insert with check (from_id=auth.uid() and
 create policy nudges_read on nudges for select using (to_id=auth.uid() or from_id=auth.uid());
 create policy nudges_upd on nudges for update using (to_id=auth.uid());
 create or replace function add_friend(c text) returns text language plpgsql security definer set search_path=public as $$ declare t uuid; begin select user_id into t from rooms where code=upper(c); if t is null then return 'no_existe'; end if; if t=auth.uid() then return 'eres_tu'; end if; if exists(select 1 from friends where user_id=t and friend_id=auth.uid()) then update friends set status='accepted' where user_id=t and friend_id=auth.uid(); return 'aceptado'; end if; insert into friends(user_id,friend_id) values(auth.uid(),t) on conflict do nothing; return 'enviado'; end $$;
+-- Tu cuerpo (2026-10-18): datos privados, nunca en la foto que ven los amigos
+create table if not exists body_profile(user_id uuid primary key default auth.uid() references auth.users on delete cascade, height_cm numeric, weight_kg numeric, goal text check (goal in ('perder','mantener','ganar')), updated_at timestamptz default now());
+create table if not exists weighins(user_id uuid not null default auth.uid() references auth.users on delete cascade, day date not null, kg numeric not null, primary key(user_id,day));
+alter table body_profile enable row level security; alter table weighins enable row level security;
+create policy own_body on body_profile for all using (user_id=auth.uid()) with check (user_id=auth.uid());
+create policy own_weighins on weighins for all using (user_id=auth.uid()) with check (user_id=auth.uid());

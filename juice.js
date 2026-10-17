@@ -197,4 +197,4 @@ const _drJ = window.dailyRender; window.dailyRender = () => { if (_drJ) _drJ(); 
 if ($("sndBtn")) $("sndBtn").onclick = toggleSound;
 render(); decorate();
 /* Capturas de demostración: ?shot=celebra | casa | premios (solo con #demo) */
-(() => { const shot = new URLSearchParams(location.search).get("shot"); if (!shot || location.hash !== "#demo") return; document.documentElement.classList.add("shot"); if (shot === "celebra") setTimeout(() => celebrate(true), 300); else setTab(shot) })();
+(() => { const shot = new URLSearchParams(location.search).get("shot"); if (!shot || location.hash !== "#demo") return; document.documentElement.classList.add("shot"); if (shot === "celebra") setTimeout(() => celebrate(true), 300); else if (shot !== "cuerpo") setTab(shot) })();
