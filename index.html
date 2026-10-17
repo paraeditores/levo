@@ -415,9 +415,18 @@ const standalone=matchMedia("(display-mode: standalone)").matches||navigator.sta
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
 function b64(u){const p="=".repeat((4-u.length%4)%4),r=atob((u+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(r,c=>c.charCodeAt(0))}
 async function pushState(){
-  if(!uid||!("serviceWorker" in navigator)||!("PushManager" in window)){$("pushCard").hidden=true;return}
-  const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
-  $("pushCard").hidden=!!sub&&Notification.permission==="granted";
+  const card=$("pushCard"),txt=card.querySelector("p"),btn=$("pushBtn");
+  if(!uid){card.hidden=true;return}
+  card.hidden=false;btn.hidden=true;
+  if(isIOS&&!standalone){txt.textContent="Para recibir avisos abre Levo desde el icono de tu pantalla de inicio (Safari → Compartir → Añadir a pantalla de inicio).";return}
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)){txt.textContent="Este navegador no admite avisos. En el iPhone, usa el icono de la pantalla de inicio (iOS 16.4 o más reciente).";return}
+  try{
+    const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,r)=>setTimeout(()=>r(new Error("tiempo")),6000))]);
+    const sub=await reg.pushManager.getSubscription();
+    if(sub&&Notification.permission==="granted"){card.hidden=true;return}
+    if(Notification.permission==="denied"){txt.textContent="Bloqueaste los avisos. Actívalos en Ajustes → Notificaciones → Levo.";return}
+    txt.textContent="Te escribo a las 8:00, 13:00, 18:00 y 22:00 con lo que te falta. Sin avisos, Levo no funciona.";btn.hidden=false;
+  }catch(e){txt.textContent="No pude preparar los avisos. Cierra Levo del todo y vuelve a abrirlo.";}
 }
 $("pushBtn").onclick=async()=>{
   try{
