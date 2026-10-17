@@ -501,7 +501,7 @@ const chestsLeft = () => Math.max(0, milestones() - new Set(purchases.filter(p =
 function renderCofres() {
   const n = chestsLeft(), st = streak();
   const chip = $("chestChip"); chip.hidden = !n; chip.textContent = "🎁 " + n;
-  if (tab !== "casa") return;
+  if (tab !== "premios") return;
   $("chestTitle").textContent = n ? (n === 1 ? "Tienes un cofre" : `Tienes ${n} cofres`) : "Cofre de racha";
   $("chestSub").textContent = n ? "Dentro hay un objeto raro que no se puede comprar." : `El próximo, al llegar a ${Math.ceil((st + 1) / 7) * 7} días de racha (vas por ${st}).`;
   $("chestBtn").hidden = !n;

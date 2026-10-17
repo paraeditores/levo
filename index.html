@@ -210,6 +210,24 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 .badge b{font-size:12px;font-weight:700;line-height:1.15}
 .badge small{font-size:11px;color:var(--muted);font-weight:600}
 #chestImg{width:96px;height:96px;image-rendering:pixelated;border-radius:20px;background:radial-gradient(circle at 50% 40%,#2a3566,#141a38)}
+.sec{margin:10px 2px -6px;font-size:21px;font-weight:800;letter-spacing:-.035em}
+.secsub{margin:-8px 2px 0;color:var(--muted);font-size:14px}
+.prog{background:var(--surface);border-radius:var(--r);padding:16px;display:grid;gap:10px}
+.prog-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.prog-top b{font-family:var(--rounded);font-size:26px;font-weight:800;letter-spacing:-.035em}
+.prog-top span{color:var(--muted);font-size:14px;font-weight:600;white-space:nowrap}
+.bar.big{height:12px}
+.prog-xp{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);font-weight:600}
+.howto{background:var(--surface);border-radius:var(--r);padding:18px;display:grid;gap:10px}
+.howto h2{margin:0;font-size:21px;font-weight:800;letter-spacing:-.03em}
+.howto ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.howto li{display:flex;align-items:center;gap:10px;font-size:15px}
+.howto li i{font-style:normal;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--soft);flex:none}
+.howto li span{flex:1}
+.howto li b{font-family:var(--rounded);font-weight:800;font-size:14px;white-space:nowrap}
+.howto p{margin:4px 0 0;color:var(--muted);font-size:13px}
+body[data-tab="hoy"] .movebtn{display:none}
+body:not([data-tab="hoy"]) .dchip{display:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:370px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.areas{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -218,7 +236,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 <main class="wrap">
   <header>
     <div class="logo"><small id="today">Hoy</small><b>Levo</b></div>
-    <div class="chips"><button class="chip gift" id="chestChip" hidden></button><span class="chip" id="coinsHoy"></span><span class="chip" id="lvl">NV 1</span><span class="chip hot" id="streak">0 días</span></div>
+    <div class="chips"><button class="chip gift" id="chestChip" hidden></button><span class="chip" id="coinsHoy"></span><span class="chip hot" id="streak">0 días</span><span id="lvl" hidden></span></div>
   </header>
 
   <section class="card enter" id="install" hidden>
@@ -237,98 +255,91 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 
   <section class="timer" id="timer" hidden aria-live="polite"></section>
 
+  <!-- HOY: marcar hábitos -->
   <div class="tab" id="tab-hoy">
-  <div id="roomSlotHoy"><section class="habroom" id="roomWrap">
-    <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
-    <div class="bubble" id="bubble"><i></i><span></span></div>
-    <button class="dchip" id="dailyChip" hidden></button>
-    <button class="movebtn" id="moveBtn">↔ Mover muebles</button>
-  </section></div>
-  <section class="rescue" id="rescue" hidden aria-live="polite"></section>
-  <section class="buddy" id="buddy" hidden></section>
-  <section class="hero enter" aria-label="Tu progreso de hoy">
-    <div class="ring">
-      <svg viewBox="0 0 150 150" id="rings" aria-hidden="true"></svg>
-      <canvas id="pet" width="16" height="16" aria-hidden="true"></canvas>
+    <div id="roomSlotHoy"><section class="habroom" id="roomWrap">
+      <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
+      <div class="bubble" id="bubble"><i></i><span></span></div>
+      <button class="dchip" id="dailyChip" hidden></button>
+      <button class="movebtn" id="moveBtn">↔ Mover muebles</button>
+    </section></div>
+    <section class="rescue" id="rescue" hidden aria-live="polite"></section>
+    <section class="card enter" id="pushCard" hidden>
+      <h2>Activa los avisos</h2>
+      <p>Te escribo a las 8:00, 13:00, 18:00 y 22:00 con lo que te falta.</p>
+      <button class="btn accent" id="pushBtn">Activar avisos</button>
+    </section>
+    <section class="prog" aria-label="Tu progreso de hoy">
+      <div class="prog-top"><b id="progTitle">Hoy</b><span id="progSub"></span></div>
+      <div class="bar big"><b id="progFill" style="width:0"></b></div>
+      <div class="prog-xp"><span id="progLvl"></span><span id="progNext"></span></div>
+    </section>
+    <nav class="week" id="week" aria-label="Últimos 7 días"></nav>
+    <h2 class="sec">Tus hábitos</h2>
+    <section id="list" class="group" aria-live="polite"></section>
+    <div class="foot">
+      <button class="ghost" id="addBtn">+ Añadir hábito</button>
+      <button class="ghost" id="edit">Editar</button>
     </div>
-    <div class="hero-txt">
-      <span class="mood" id="mood">Hoy</span>
-      <div class="pct"><span id="pct">0</span><small>%</small></div>
-      <p class="say" id="say" aria-live="polite">Cargando…</p>
-    </div>
-    <div class="xp">
-      <div class="xp-top"><span id="xptxt">0 XP</span><span id="xpnext"></span></div>
-      <div class="bar"><b id="xpfill" style="width:0"></b></div>
-    </div>
-  </section>
-
-  <section class="reto" id="reto" hidden aria-live="polite"></section>
-  <section class="goals" id="goals" aria-label="Tus próximos premios"></section>
-  <section class="areas" id="areas" aria-label="Áreas"></section>
-
-  <section class="card enter" id="pushCard" hidden>
-    <h2>Activa los avisos</h2>
-    <p>Te escribo a las 8:00, 13:00, 18:00 y 22:00 con lo que te falta. Sin avisos, Levo no funciona.</p>
-    <button class="btn accent" id="pushBtn">Activar avisos</button>
-  </section>
-
-  <button class="weekcard" id="weekCard" hidden></button>
-  <nav class="week" id="week" aria-label="Últimos 7 días"></nav>
-
-  <section id="list" class="group" aria-live="polite"></section>
-
-  <div class="foot">
-    <button class="ghost" id="addBtn">+ Añadir hábito</button>
-    <button class="ghost" id="edit">Editar</button>
-  </div>
-  <form class="card" id="addForm" hidden>
-    <input id="habitName" required maxlength="60" placeholder="Ej.: 20 flexiones">
-    <select id="habitArea">
-      <option value="cuerpo">Cuerpo</option><option value="trabajo">Trabajo</option>
-      <option value="mente">Mente</option><option value="vida">Vida y dinero</option>
-    </select>
-    <button class="btn" type="submit">Añadir</button>
-  </form>
+    <form class="card" id="addForm" hidden>
+      <input id="habitName" required maxlength="60" placeholder="Ej.: 20 flexiones">
+      <select id="habitArea">
+        <option value="cuerpo">Cuerpo</option><option value="trabajo">Trabajo</option>
+        <option value="mente">Mente</option><option value="vida">Vida y dinero</option>
+      </select>
+      <button class="btn" type="submit">Añadir</button>
+    </form>
+    <h2 class="sec">Tu próximo premio</h2>
+    <section class="goals" id="goals"></section>
   </div>
 
+  <!-- CASA: tu habitación y la tienda -->
   <div class="tab" id="tab-casa" hidden>
     <div id="roomSlotCasa"></div>
     <p class="roomnote" id="roomNote"></p>
-    <section class="amplia" id="amplia"></section>
     <div class="foot"><button class="ghost" id="editLook">✏️ Editar personaje</button><button class="ghost" id="hardToggle"></button></div>
-    <section class="chestcard enter">
-      <div class="mini-chest" aria-hidden="true"></div>
-      <div class="pt"><b id="chestTitle">Cofre de racha</b><small id="chestSub"></small></div>
-      <button class="btn accent" id="chestBtn" hidden>Abrir</button>
-    </section>
-    <p class="status" id="bongoNote" hidden></p>
+    <section class="amplia" id="amplia"></section>
+    <h2 class="sec">Tienda</h2>
     <div class="seg" role="tablist">
       <button role="tab" data-shop="muebles" aria-selected="true">Muebles</button>
       <button role="tab" data-shop="ropa" aria-selected="false">Ropa</button>
       <button role="tab" data-shop="estilos" aria-selected="false">Paredes y suelos</button>
     </div>
     <section class="shop" id="shop"></section>
-    <p class="status">Cada hábito da 5 monedas. Llegar al 60 % del día da +20 y el 100 %, +50. Con una racha de 7 días, el doble.</p>
   </div>
 
+  <!-- PREMIOS: todo lo que se gana -->
   <div class="tab" id="tab-premios" hidden>
-    <section class="card enter">
-      <h2>Tiempo libre</h2>
-      <p id="premioNote"></p>
+    <section class="howto">
+      <h2>Cómo se gana</h2>
+      <ul>
+        <li><i>✅</i><span>Cada hábito</span><b>+5 🪙 · +10 XP</b></li>
+        <li><i>🎯</i><span>Llegar al 60 % del día</span><b>+20 🪙</b></li>
+        <li><i>💯</i><span>Día perfecto (100 %)</span><b>+50 🪙</b></li>
+        <li><i>🔥</i><span>Cada 7 días de racha</span><b>1 cofre</b></li>
+      </ul>
+      <p>Las monedas 🪙 se gastan en la tienda y en tiempo libre. La XP te sube de nivel y desbloquea regalos.</p>
     </section>
+    <section class="reto" id="reto" hidden aria-live="polite"></section>
+    <section class="chestcard">
+      <div class="mini-chest" aria-hidden="true"></div>
+      <div class="pt"><b id="chestTitle">Cofre de racha</b><small id="chestSub"></small></div>
+      <button class="btn accent" id="chestBtn" hidden>Abrir</button>
+    </section>
+    <p class="status" id="bongoNote" hidden></p>
+    <h2 class="sec">Canjea tus monedas</h2>
+    <p class="secsub" id="premioNote"></p>
     <section class="premios" id="premios"></section>
-    <section class="card">
-      <h2>Ruta de niveles</h2>
-      <p>Premios exclusivos y gratis al subir de nivel. No se pueden comprar.</p>
-      <div class="ruta" id="ruta"></div>
-    </section>
-    <section class="card">
-      <div class="ins-head"><h2>Insignias</h2><span id="insCount"></span></div>
-      <div class="insignias" id="insignias"></div>
-    </section>
+    <h2 class="sec">Regalos por nivel</h2>
+    <div class="ruta" id="ruta"></div>
+    <div class="ins-head"><h2 class="sec">Insignias</h2><span id="insCount"></span></div>
+    <div class="insignias" id="insignias"></div>
   </div>
 
+  <!-- AMIGOS -->
   <div class="tab" id="tab-amigos" hidden>
+    <section class="buddy" id="buddy" hidden></section>
+    <button class="weekcard" id="weekCard" hidden></button>
     <section class="codecard enter">
       <small>Tu código de amigo</small>
       <div class="code" id="myCode">······</div>
@@ -340,6 +351,14 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     </section>
     <section class="flist" id="flist"></section>
     <p class="status">Tus amigos ven tu habitación, tu nivel, tu racha y tu % de hoy. Nunca ven qué hábitos tienes.</p>
+  </div>
+
+  <!-- piezas internas que ya no se muestran -->
+  <div hidden aria-hidden="true">
+    <svg id="rings"></svg><canvas id="pet" width="16" height="16"></canvas>
+    <span id="mood"></span><span id="pct"></span><p id="say"></p>
+    <span id="xptxt"></span><span id="xpnext"></span><b id="xpfill"></b>
+    <section id="areas"></section>
   </div>
 
   <p class="status" id="status"></p>
@@ -362,8 +381,8 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 <nav class="tabbar" aria-label="Secciones">
   <button id="tb-hoy" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.6 2.5L16 9.5"/></svg>Hoy</button>
   <button id="tb-casa" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5V20H4z"/><path d="M10 20v-5h4v5"/></svg>Casa</button>
-  <button id="tb-amigos" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16 14.6c2.8-.3 5 1.3 5.5 4.4"/></svg>Amigos</button>
   <button id="tb-premios" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M12 9v11M4 13h16M12 9c-2-4-6-3-5 0M12 9c2-4 6-3 5 0"/></svg>Premios</button>
+  <button id="tb-amigos" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16 14.6c2.8-.3 5 1.3 5.5 4.4"/></svg>Amigos</button>
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
@@ -551,5 +570,6 @@ render();
 <script src="daily.js"></script>
 <script src="share.js"></script>
 <script src="friends.js"></script>
+<script src="ux.js"></script>
 </body>
 </html>
