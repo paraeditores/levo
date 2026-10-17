@@ -5,7 +5,7 @@ const myName = () => (outfit._cfg && outfit._cfg.name) || "Jugador";
 
 /* ---------- Mi habitación pública (solo la ven mis amigos) ---------- */
 function mySnap() {
-  const own = [...MUEBLES, ...ESTILOS].filter(i => owned(i.id)).map(i => i.id);
+  const own = [...MUEBLES, ...ESTILOS, ...AMPLIA].filter(i => owned(i.id)).map(i => i.id);
   if (bongoUnlocked()) own.push("@bongo");
   const { _cfg, ...look } = outfit;
   return { outfit: look, owned: own, lvl: level(), streak: streak(), pct: Math.round(frac(dayKey(0)) * 100), mood, layout: outfit._layout || null, day: dayKey(0) };
@@ -53,10 +53,10 @@ const snapToday = s => s && s.day === dayKey(0) ? s.pct : 0;
 /* ---------- Pintar la habitación de otra persona ---------- */
 const visitor = { x: 3, y: 3, tx: 3, ty: 3, wait: 1, step: 0, wave: 0 };
 function drawRoomFor(cv, room) {
-  const s = room.snap || {}, saved = { outfit, mood, me: { ...me } };
+  const s = room.snap || {}, saved = { outfit, mood, me: { ...me }, ed: editing2 }; editing2 = false;
   outfit = { ...(s.outfit || {}), _layout: s.layout || undefined }; mood = s.mood || "ok"; Object.assign(me, visitor);
   window._ownSet = new Set(s.owned || []);
-  try { drawRoom(cv) } finally { window._ownSet = null; Object.assign(visitor, me); Object.assign(me, saved.me); outfit = saved.outfit; mood = saved.mood }
+  try { drawRoom(cv) } finally { window._ownSet = null; Object.assign(visitor, me); Object.assign(me, saved.me); outfit = saved.outfit; mood = saved.mood; editing2 = saved.ed }
 }
 function miniAvatar(s) {
   const c = document.createElement("canvas"); c.width = 30; c.height = 44; const x = c.getContext("2d"); x.imageSmoothingEnabled = false;

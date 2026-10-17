@@ -168,7 +168,14 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 .result .btn{width:100%;margin-top:8px}
 
 .habroom{position:relative;border-radius:var(--r);overflow:hidden;background:radial-gradient(120% 90% at 50% 30%,#2a3566 0%,#141a38 55%,#0a0d1f 100%);box-shadow:0 10px 30px rgba(10,13,31,.35)}
-.habroom canvas{display:block;width:100%;aspect-ratio:240/190;image-rendering:pixelated}
+.habroom canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:manipulation}
+.habroom.editing{box-shadow:0 0 0 3px #ffd60a,0 10px 30px rgba(10,13,31,.35)}
+.movebtn{position:absolute;right:10px;bottom:10px;z-index:2;border:0;border-radius:99px;padding:8px 12px;font-weight:700;font-size:13px;background:rgba(255,255,255,.92);color:#1c1c1e;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.habroom.editing .movebtn{background:#ffd60a}
+.amplia{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--r);padding:14px 16px}
+.amplia i{font-style:normal;font-size:24px;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--soft);flex:none}
+.amplia small{color:var(--muted);font-size:13px}
+.amplia .btn{min-height:42px;padding:0 14px;font-size:15px;white-space:nowrap}
 .bubble{position:absolute;max-width:72%;background:#fff;color:#111;border:2px solid #111;border-radius:10px;padding:5px 9px 5px 26px;font-size:13px;font-weight:600;line-height:1.25;letter-spacing:-.01em;box-shadow:0 2px 0 rgba(0,0,0,.25);pointer-events:none;transition:left .25s linear,top .25s linear}
 .bubble i{position:absolute;left:6px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:4px;background:linear-gradient(135deg,#ff2d55,#ff9f0a)}
 .bubble::after{content:"";position:absolute;left:50%;bottom:-8px;width:10px;height:10px;margin-left:-5px;background:#fff;border-right:2px solid #111;border-bottom:2px solid #111;transform:rotate(45deg)}
@@ -235,6 +242,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
     <div class="bubble" id="bubble"><i></i><span></span></div>
     <button class="dchip" id="dailyChip" hidden></button>
+    <button class="movebtn" id="moveBtn">↔ Mover muebles</button>
   </section></div>
   <section class="rescue" id="rescue" hidden aria-live="polite"></section>
   <section class="buddy" id="buddy" hidden></section>
@@ -286,6 +294,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
   <div class="tab" id="tab-casa" hidden>
     <div id="roomSlotCasa"></div>
     <p class="roomnote" id="roomNote"></p>
+    <section class="amplia" id="amplia"></section>
     <div class="foot"><button class="ghost" id="editLook">✏️ Editar personaje</button><button class="ghost" id="hardToggle"></button></div>
     <section class="chestcard enter">
       <div class="mini-chest" aria-hidden="true"></div>

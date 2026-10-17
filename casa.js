@@ -199,8 +199,8 @@ function drawBongo(x, sx, sy) {
 
 /* ---------- Habitación isométrica estilo Habbo ---------- */
 const RW = 240, RH = 190, TW = 16, TH = 8, ZK = 1.35;
-let OX = 120, OY = 84;
-const P = (x, y, z = 0) => [OX + (x - y) * TW, OY + (x + y) * TH - z * ZK];
+let OX = 120, OY = 84, N = 6, RWc = 240, RHc = 190, DX = 0, DY = 0;
+const P = (x, y, z = 0) => [OX + ((x + DX) - (y + DY)) * TW, OY + ((x + DX) + (y + DY)) * TH - z * ZK];
 function shade(hex, f) { if (!hex.startsWith("#")) return hex; const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255; const m = v => Math.max(0, Math.min(255, Math.round(f > 1 ? v + (255 - v) * (f - 1) : v * f))); return `rgb(${m(r)},${m(g)},${m(b)})` }
 function poly(x, pts, c, line) { x.fillStyle = c; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); if (line) { x.strokeStyle = line; x.lineWidth = 1; x.stroke() } }
 function box(x, gx, gy, w, d, h, c, z0 = 0) {
@@ -245,59 +245,113 @@ FURN.nevera.d = 3.2;
 FURN.trono.draw = x => { box(x, 4.4, 3.3, 1, 1, 6, "#ffd60a"); box(x, 4.4, 4.15, 1, .2, 18, "#ffc300", 6); box(x, 4.5, 3.4, .8, .8, 1.5, "#ff2d55", 6) };
 FURN.trono.d = 7.7;
 
+/* Posición original (x, y) y tamaño (ancho, fondo) de cada mueble movible */
+const ANCH = { alfombra: [1.6, 1.8, 2.8, 2.6], esterilla: [4.3, 2.4, 1, 2], estanteria: [0, .9, .6, 1.6], trofeo: [1.4, .3, .6, .6], escritorio: [2, 0, 2.6, 1.1], dj: [2.1, 1.2, 1.6, .7], planta: [5.15, .05, .9, .9], hucha: [4.7, .5, .55, .4], nevera: [.1, 2.6, .8, .8], saco: [5, 1, .55, .55], arcade: [5.1, 2.5, .9, .8], lava: [5.4, 3.4, .35, .35], silla: [3, 1.5, .8, .8], cama: [0, 3.2, 1.8, 2.8], lampara: [.1, 5.3, .55, .55], trono: [4.4, 3.3, 1, 1.05], mancuernas: [5.3, 4.3, .3, 1.3], acuario: [2.2, 5.2, 1.2, .6], sofa: [3.4, 4.8, 2.3, 1.05], estatua: [1.9, 4.9, .8, .8] };
+FURN.setup.follow = "escritorio";
+const AMPLIA = [{ id: "ampliacion-8", n: 8, name: "Ampliar a 8×8", cost: 300, lv: 3 }, { id: "ampliacion-10", n: 10, name: "Ampliar a 10×10", cost: 700, lv: 8 }];
+const roomSize = () => owned("ampliacion-10") ? 10 : owned("ampliacion-8") ? 8 : 6;
+function setGeom(n) { N = n; RWc = 2 * n * TW + 48; RHc = n * 2 * TH + 94; OX = RWc / 2 }
+const layout = () => outfit._layout || {};
+function posOf(id) { const L = layout()[id], a = ANCH[id]; return L ? [L[0], L[1]] : a ? [a[0], a[1]] : [0, 0] }
+function offOf(id) { const key = FURN[id].follow || id, a = ANCH[key]; if (!a) return [0, 0]; const p = posOf(key); return [p[0] - a[0], p[1] - a[1]] }
+function footprints(skip) { return Object.keys(ANCH).filter(id => owned(id) && id !== skip && !FURN[id].f).map(id => { const [x, y] = posOf(id), a = ANCH[id]; return { id, x, y, w: a[2], d: a[3] } }) }
+function freeTiles() {
+  const fps = footprints(), out = [];
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const cx = i + .5, cy = j + .5; if (!fps.some(f => cx > f.x - .3 && cx < f.x + f.w + .3 && cy > f.y - .3 && cy < f.y + f.d + .3)) out.push([cx, cy]) }
+  return out.length ? out : [[N / 2, N / 2]];
+}
+
 /* Caminar por la habitación */
-const FREE = [[3.2, 3.2], [2.4, 2.4], [2.2, 3.9], [3.8, 3.8], [2.8, 4.4], [4.0, 2.8], [3.4, 2.6]];
 const me = { x: 3.2, y: 3.2, tx: 3.2, ty: 3.2, wait: 2, step: 0, wave: 0 };
+const FREE = [[3.2, 3.2]]; /* compatibilidad con visitas: se rellena en cada paseo */
 function walkTick(dt) {
-  const still2 = mood === "enfermo" || mood === "agotado";
-  if (me.wait > 0) { me.wait -= dt; if (me.wait <= 0 && !still2) { const t = FREE[Math.floor(Math.random() * FREE.length)]; me.tx = t[0]; me.ty = t[1] } return }
+  const still2 = mood === "enfermo" || mood === "agotado" || editing2;
+  if (me.wait > 0) { me.wait -= dt; if (me.wait <= 0 && !still2) { const ft = freeTiles(); FREE.length = 0; FREE.push(...ft); const t = ft[Math.floor(Math.random() * ft.length)]; me.tx = t[0]; me.ty = t[1] } return }
   const dx = me.tx - me.x, dy = me.ty - me.y, dist = Math.hypot(dx, dy);
   if (dist < .05) { me.x = me.tx; me.y = me.ty; me.wait = 2 + Math.random() * 4; if (mood === "feliz" && Math.random() < .5) me.wave = 1.2; return }
   const v = 1.1 * dt; me.x += dx / dist * Math.min(v, dist); me.y += dy / dist * Math.min(v, dist); me.step += dt * 6;
 }
 function styleOf(slot, def) { return ESTILOS.find(e => e.id === outfit[slot] && owned(e.id)) || ESTILOS.find(e => e.id === def) }
 function drawShell(x, wall, floor) {
-  x.clearRect(0, 0, RW, RH);
-  const H = 54;
-  // paredes con borde superior grueso (estilo Habbo)
-  poly(x, [P(0, 0, 0), P(6, 0, 0), P(6, 0, H), P(0, 0, H)], shade(wall.c, 1.05), "rgba(20,16,30,.8)");
-  poly(x, [P(0, 0, 0), P(0, 6, 0), P(0, 6, H), P(0, 0, H)], shade(wall.c, .86), "rgba(20,16,30,.8)");
-  if (wall.stars) { for (let i = 0; i < 26; i++) { const sx = (i * 47) % 1, gx = (i * 0.231) % 6, z = 8 + (i * 13) % 42; const [a, b] = i % 2 ? P(gx, 0, z) : P(0, gx, z); x.fillStyle = i % 3 ? "#ffffff" : "#ffd60a"; x.fillRect(a, b, 1, 1) } }
-  poly(x, [P(0, 0, H), P(6, 0, H), P(6, -.25, H), P(-.25, -.25, H)], shade(wall.c, 1.25), "rgba(20,16,30,.8)");
-  poly(x, [P(0, 0, H), P(0, 6, H), P(-.25, 6, H), P(-.25, -.25, H)], shade(wall.c, 1.15), "rgba(20,16,30,.8)");
-  // ventana con vistas a Murcia (pared izquierda)
+  x.clearRect(0, 0, RWc, RHc);
+  const H = 54, n = N;
+  poly(x, [P(0, 0, 0), P(n, 0, 0), P(n, 0, H), P(0, 0, H)], shade(wall.c, 1.05), "rgba(20,16,30,.8)");
+  poly(x, [P(0, 0, 0), P(0, n, 0), P(0, n, H), P(0, 0, H)], shade(wall.c, .86), "rgba(20,16,30,.8)");
+  if (wall.stars) { for (let i = 0; i < 26 * n / 6; i++) { const gx = (i * 0.231) % n, z = 8 + (i * 13) % 42; const [a, b] = i % 2 ? P(gx, 0, z) : P(0, gx, z); x.fillStyle = i % 3 ? "#ffffff" : "#ffd60a"; x.fillRect(a, b, 1, 1) } }
+  poly(x, [P(0, 0, H), P(n, 0, H), P(n, -.25, H), P(-.25, -.25, H)], shade(wall.c, 1.25), "rgba(20,16,30,.8)");
+  poly(x, [P(0, 0, H), P(0, n, H), P(-.25, n, H), P(-.25, -.25, H)], shade(wall.c, 1.15), "rgba(20,16,30,.8)");
   wallRect(x, 2.2, 3.8, 20, 38, "#8fd3ff"); wallRect(x, 2.95, 3.05, 20, 38, "#ffffff"); wallRect(x, 2.2, 3.8, 28.5, 29.5, "#ffffff");
   wallRect(x, 3.3, 3.55, 21, 33, "#b0723a");
-  // puerta (pared del fondo)
-  backRect(x, 4.6, 5.6, 0, 30, "#8a5a3c"); x.fillStyle = "#ffd60a"; const [kx, ky] = P(5.45, 0, 15); x.fillRect(kx, ky, 2, 2);
-  // suelo con baldosas
-  poly(x, [P(0, 0), P(6, 0), P(6, 6), P(0, 6)], floor.c, "rgba(20,16,30,.8)");
-  for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) { const alt = (i + j) % 2; if (floor.check ? alt : alt && true) poly(x, [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], floor.check ? floor.check : shade(floor.c, .93)) }
-  // grosor del suelo
-  poly(x, [P(6, 0), P(6, 6), P(6, 6, -6), P(6, 0, -6)], shade(floor.c, .55), "rgba(20,16,30,.8)");
-  poly(x, [P(0, 6), P(6, 6), P(6, 6, -6), P(0, 6, -6)], shade(floor.c, .7), "rgba(20,16,30,.8)");
+  if (n > 6) { wallRect(x, n - 2.4, n - .8, 20, 38, "#8fd3ff"); wallRect(x, n - 1.65, n - 1.55, 20, 38, "#ffffff"); wallRect(x, n - 2.4, n - .8, 28.5, 29.5, "#ffffff") }
+  backRect(x, n - 1.4, n - .4, 0, 30, "#8a5a3c"); x.fillStyle = "#ffd60a"; const [kx, ky] = P(n - .55, 0, 15); x.fillRect(kx, ky, 2, 2);
+  poly(x, [P(0, 0), P(n, 0), P(n, n), P(0, n)], floor.c, "rgba(20,16,30,.8)");
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { if ((i + j) % 2) poly(x, [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], floor.check ? floor.check : shade(floor.c, .93)) }
+  poly(x, [P(n, 0), P(n, n), P(n, n, -6), P(n, 0, -6)], shade(floor.c, .55), "rgba(20,16,30,.8)");
+  poly(x, [P(0, n), P(n, n), P(n, n, -6), P(0, n, -6)], shade(floor.c, .7), "rgba(20,16,30,.8)");
 }
+function withOff(id, fn) { const [ox, oy] = offOf(id); DX = ox; DY = oy; try { fn() } finally { DX = 0; DY = 0 } }
 function drawRoom(cv) {
-  if (!cv) return; const x = cv.getContext("2d"); x.imageSmoothingEnabled = false;
+  if (!cv) return;
+  setGeom(roomSize());
+  if (cv.width !== RWc || cv.height !== RHc) { cv.width = RWc; cv.height = RHc }
+  const x = cv.getContext("2d"); x.imageSmoothingEnabled = false;
   drawShell(x, styleOf("pared", "pared-lavanda"), styleOf("suelo", "suelo-madera"));
   const items = Object.keys(FURN).filter(id => owned(id));
-  items.filter(id => FURN[id].w || FURN[id].f).forEach(id => FURN[id].draw(x));
-  const list = items.filter(id => !FURN[id].w && !FURN[id].f).map(id => ({ d: FURN[id].d, draw: () => FURN[id].draw(x) }));
+  items.filter(id => FURN[id].w).forEach(id => FURN[id].draw(x));
+  items.filter(id => FURN[id].f).forEach(id => withOff(id, () => FURN[id].draw(x)));
+  if (editing2 && selected2 && ANCH[selected2]) { const [px, py] = posOf(selected2), a = ANCH[selected2]; poly(x, [P(px, py), P(px + a[2], py), P(px + a[2], py + a[3]), P(px, py + a[3])], "rgba(255,214,10,.45)", "#ffd60a") }
+  const list = items.filter(id => !FURN[id].w && !FURN[id].f).map(id => { const [ox, oy] = offOf(id); return { d: FURN[id].d + ox + oy, draw: () => withOff(id, () => FURN[id].draw(x)) } });
   const fr = (me.wait > 0) ? 0 : (Math.floor(me.step) % 2 ? 1 : 2);
   list.push({ d: me.x + me.y, draw: () => { const [ax, ay] = P(me.x, me.y); drawAvatar(x, ax, ay, outfit, mood, blink, fr, me.wave > 0) } });
-  if (bongoUnlocked()) list.push({ d: 8.0, draw: () => { const [bx, by] = P(4.4, 3.6); drawBongo(x, bx - 14, by - 20) } });
+  if (bongoUnlocked()) { const bpos = freeTiles().slice(-1)[0] || [4.4, 3.6]; const bp = window._ownSet ? [4.4, 3.6] : (window._bongoPos = window._bongoPos && Math.random() > .002 ? window._bongoPos : bpos); list.push({ d: bp[0] + bp[1], draw: () => { const [bx, by] = P(bp[0], bp[1]); drawBongo(x, bx - 14, by - 20) } }) }
   list.sort((a, b) => a.d - b.d).forEach(o => o.draw());
   if (window.roomExtras) roomExtras(x);
-  if (mood === "enfermo") { x.fillStyle = "rgba(10,10,25,.45)"; x.fillRect(0, 0, RW, RH); x.fillStyle = "rgba(220,220,220,.5)"; for (let i = 0; i < 60; i++) x.fillRect((i * 53) % RW, (i * 37) % RH, 1, 1) }
+  if (mood === "enfermo") { x.fillStyle = "rgba(10,10,25,.45)"; x.fillRect(0, 0, RWc, RHc); x.fillStyle = "rgba(220,220,220,.5)"; for (let i = 0; i < 60; i++) x.fillRect((i * 53) % RWc, (i * 37) % RHc, 1, 1) }
 }
 /* Bocadillo de texto encima del personaje */
 function placeBubble() {
   const cv = $("room"), b = $("bubble"); if (!cv || !b || cv.offsetParent === null) return;
-  const [ax, ay] = P(me.x, me.y), k = cv.clientWidth / RW;
+  b.hidden = editing2;
+  const [ax, ay] = P(me.x, me.y), k = cv.clientWidth / cv.width;
   b.style.left = Math.max(8, Math.min(cv.clientWidth - b.offsetWidth - 8, ax * k - b.offsetWidth / 2)) + "px";
   b.style.top = Math.max(6, (ay - 44) * k - b.offsetHeight) + "px";
   const t = $("say").textContent; if (b.dataset.t !== t) { b.dataset.t = t; b.querySelector("span").textContent = t }
 }
+
+/* ---------- Mover muebles ---------- */
+let editing2 = false, selected2 = null;
+function toGrid(cv, ev) {
+  const r = cv.getBoundingClientRect(), sx = (ev.clientX - r.left) * cv.width / r.width, sy = (ev.clientY - r.top) * cv.height / r.height;
+  const hits = [];
+  for (let z = 0; z <= 28; z += 4) { const a = (sx - OX) / TW, b = (sy + z * ZK - OY) / TH; hits.push([(a + b) / 2, (b - a) / 2, z]) }
+  return hits;
+}
+function roomTap(ev) {
+  if (!editing2) return; const cv = $("room"), hits = toGrid(cv, ev);
+  const fps = Object.keys(ANCH).filter(id => owned(id)).map(id => { const [x, y] = posOf(id), a = ANCH[id]; return { id, x, y, w: a[2], d: a[3], dep: (FURN[id].d || 0) + x + y } });
+  if (!selected2) {
+    let best = null;
+    hits.forEach(([gx, gy, z]) => fps.forEach(f => { if (gx >= f.x - .15 && gx <= f.x + f.w + .15 && gy >= f.y - .15 && gy <= f.y + f.d + .15 && (z === 0 || !FURN[f.id].f)) { if (!best || f.dep > best.dep) best = f } }));
+    if (best) { selected2 = best.id; status(`${(MUEBLES.find(m => m.id === best.id) || {}).name || "Mueble"}: toca dónde quieres ponerlo.`) } else status("Toca un mueble para moverlo.");
+    return;
+  }
+  const [gx, gy] = hits[0], a = ANCH[selected2];
+  if (gx < -.5 || gy < -.5 || gx > N + .5 || gy > N + .5) { selected2 = null; status("Toca un mueble para moverlo."); return }
+  const nx = Math.max(0, Math.min(N - a[2], Math.round((gx - a[2] / 2) * 2) / 2)), ny = Math.max(0, Math.min(N - a[3], Math.round((gy - a[3] / 2) * 2) / 2));
+  outfit = { ...outfit, _layout: { ...layout(), [selected2]: [nx, ny] } };
+  status("Movido. Toca otro mueble o pulsa Listo."); selected2 = null; me.wait = .2;
+}
+function setEditing(on) {
+  editing2 = on; selected2 = null;
+  const b = $("moveBtn"); if (b) b.textContent = on ? "✓ Listo" : "↔ Mover muebles";
+  $("roomWrap").classList.toggle("editing", on);
+  if (on) status("Toca un mueble para moverlo.");
+  else { status("Habitación guardada."); if (uid && uid !== "demo") write(() => sb.from("profile").upsert({ user_id: uid, outfit, updated_at: new Date().toISOString() }, { onConflict: "user_id" })) }
+}
+
+if ($("room")) $("room").addEventListener("click", roomTap);
+if ($("moveBtn")) $("moveBtn").onclick = () => setEditing(!editing2);
+
 let lastT = performance.now();
 function loop(t) {
   const dt = Math.min(.1, (t - lastT) / 1000); lastT = t;
@@ -311,12 +365,14 @@ drawPet = function () { /* el personaje vive en la habitación */ };
 const iconCache = {};
 function iconFor(it) {
   if (iconCache[it.id]) return iconCache[it.id];
+  const g0 = N; setGeom(6);
   const c = document.createElement("canvas"); c.width = RW; c.height = RH; const x = c.getContext("2d");
   if (it.slot === "pared" || it.slot === "suelo") drawShell(x, it.slot === "pared" ? it : ESTILOS[0], it.slot === "suelo" ? it : ESTILOS[5]);
   else if (it.slot) drawAvatar(x, 120, 120, { [it.slot]: it.id }, "feliz", false);
   else if (FURN[it.id]) FURN[it.id].draw(x);
   const d = x.getImageData(0, 0, RW, RH).data; let x0 = RW, y0 = RH, x1 = 0, y1 = 0;
   for (let y = 0; y < RH; y++) for (let i = 0; i < RW; i++) if (d[(y * RW + i) * 4 + 3] > 10) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y }
+  setGeom(g0);
   if (x1 < x0) return "";
   const w = x1 - x0 + 1, h = y1 - y0 + 1, s = Math.max(1, Math.floor(56 / Math.max(w, h))), o = document.createElement("canvas");
   o.width = 64; o.height = 64; const ox = o.getContext("2d"); ox.imageSmoothingEnabled = false;
@@ -373,6 +429,7 @@ function renderCasa() {
   renderGoals();
   if (tab === "casa") {
     $("roomNote").textContent = sickNow ? "Estás enfermo: la tienda está cerrada hasta que llegues hoy al 60 %." : `${MUEBLES.filter(m => !m.rarity && !m.lvGift && owned(m.id)).length} de ${MUEBLES.filter(m => !m.rarity && !m.lvGift).length} muebles · nivel ${lv}`;
+    renderAmplia(c, lv, sickNow);
     const list = casaTab === "muebles" ? MUEBLES : casaTab === "ropa" ? ROPA : ESTILOS, g = $("shop"); g.innerHTML = "";
     list.filter(it => !it.rarity || owned(it.id)).forEach(it => {
       const have = owned(it.id), wearable = !!it.slot, worn = wearable && (outfit[it.slot] === it.id || (it.base && !outfit[it.slot]));
@@ -404,6 +461,14 @@ function renderCasa() {
   renderCofres(); renderTimer(); renderRescue(); checkLevelUp();
   if (window.onboardingRender) onboardingRender();
   if (window.dailyRender) dailyRender();
+}
+
+function renderAmplia(c, lv, sickNow) {
+  const el = $("amplia"); if (!el) return; const next = AMPLIA.find(x => !owned(x.id)), n = roomSize();
+  if (!next) { el.innerHTML = `<i>🏠</i><div class="pt"><b>Habitación ${n}×${n}</b><small>Tamaño máximo. ¡Menuda casa!</small></div>`; return }
+  const lock = lv < next.lv;
+  el.innerHTML = `<i>📐</i><div class="pt"><b>Habitación ${n}×${n}</b><small>${lock ? `${next.name} desde el nivel ${next.lv}` : `${next.name}: más espacio para tus muebles`}</small></div><button class="btn accent" id="ampBtn">${money(next.cost)}</button>`;
+  const b = $("ampBtn"); b.disabled = lock || sickNow || c < next.cost; b.onclick = () => { buy(next, "item"); status(`¡Habitación ampliada a ${next.n}×${next.n}!`) };
 }
 
 /* ---------- Subida de nivel ---------- */
@@ -517,6 +582,6 @@ document.querySelectorAll("[data-shop]").forEach(b => b.onclick = () => { casaTa
 window.onRendered = renderCasa;
 window.loadCasa = loadCasa;
 
-if (uid === "demo" && location.hash === "#demo") { milestones = () => 2; xp = () => 470; purchases = ["alfombra", "cama", "escritorio", "setup", "planta", "estanteria", "silla", "cuadro", "gorra-negra", "cadena-oro", "vaqueros"].map(item => ({ item, kind: "item", cost: 0, at: "2026-10-17T10:00:00Z" })); outfit = { gorra: "gorra-negra", cadena: "cadena-oro", pant: "vaqueros" } }
+if (uid === "demo" && location.hash === "#demo") { milestones = () => 2; xp = () => 470; purchases = ["alfombra", "cama", "escritorio", "setup", "planta", "estanteria", "silla", "cuadro", "sofa", "gorra-negra", "cadena-oro", "vaqueros", "ampliacion-8"].map(item => ({ item, kind: "item", cost: 0, at: "2026-10-17T10:00:00Z" })); outfit = { gorra: "gorra-negra", cadena: "cadena-oro", pant: "vaqueros" } }
 renderCasa();
 requestAnimationFrame(loop);

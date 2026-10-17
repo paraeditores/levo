@@ -24,9 +24,9 @@ function buildStory() {
   x.textBaseline = "alphabetic"; x.fillStyle = grad(80, 360); x.font = F(800, 92); x.fillText("Levo", 80, 170);
   x.fillStyle = "rgba(255,255,255,.72)"; x.font = F(600, 38); x.fillText((S.past ? "Mi semana · " : "Mi semana hasta hoy · ") + S.label, 80, 230);
   // habitación
-  const rc = document.createElement("canvas"); rc.width = RW; rc.height = RH; drawRoom(rc);
+  const rc = document.createElement("canvas"); drawRoom(rc);
   x.save(); roundRect(x, 60, 290, 960, 760, 48); x.clip(); const bg = x.createRadialGradient(540, 560, 60, 540, 620, 640); bg.addColorStop(0, "#2a3566"); bg.addColorStop(1, "#0f1430"); x.fillStyle = bg; x.fillRect(60, 290, 960, 760);
-  x.imageSmoothingEnabled = false; x.drawImage(rc, 60, 290, 960, 760); x.restore();
+  x.imageSmoothingEnabled = false; { const k = Math.min(960 / rc.width, 760 / rc.height), w2 = rc.width * k, h2 = rc.height * k; x.drawImage(rc, 60 + (960 - w2) / 2, 290 + (760 - h2) / 2, w2, h2) } x.restore();
   // porcentaje grande
   x.fillStyle = grad(80, 700); x.font = F(800, 260); x.fillText(`${S.avg}`, 72, 1330);
   const w = x.measureText(`${S.avg}`).width; x.font = F(800, 110); x.fillText("%", 90 + w, 1330);
