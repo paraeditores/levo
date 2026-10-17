@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mini Esteban</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mini Esteban">
+<meta name="theme-color" content="#d9632b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: un aparato Tamagotchi arriba (pantalla LCD con el personaje y sus barras) y debajo la lista de hábitos del día, pensada para el pulgar en el móvil. */
+:root{
+  --bg:#e7ebe1; --fg:#1d231b; --muted:#5d6757; --card:#f7f8f3; --line:#cfd6c6;
+  --shell:#d9632b; --shell-dark:#a9471a; --accent:#d9632b; --done:#3f7a3a;
+  --lcd:#c3d0ab; --ink:#1f2a1c; --ink-mid:#55684a; --ink-soft:#eef2dc;
+  --display:"Silkscreen","Courier New",monospace;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#131712; --fg:#e4e9dc; --muted:#9aa591; --card:#1c211a; --line:#2f382c;
+  --shell:#c9572a; --shell-dark:#8e3a15; --accent:#f0804a; --done:#7cc06f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131712; --fg:#e4e9dc; --muted:#9aa591; --card:#1c211a; --line:#2f382c;
+  --shell:#c9572a; --shell-dark:#8e3a15; --accent:#f0804a; --done:#7cc06f; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
+.card h2{margin:0;font-size:18px}
+.card p{margin:0;color:var(--muted);font-size:14px}
+.wrap{max-width:460px;margin:0 auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+.device{background:var(--shell);border-radius:48% 48% 40px 40px / 30% 30% 40px 40px;padding:34px 22px 22px;box-shadow:inset 0 -6px 0 var(--shell-dark)}
+.brand{font-family:var(--display);color:#fff4ec;text-align:center;font-size:13px;letter-spacing:.12em;margin:0 0 12px}
+.lcd{background:var(--lcd);color:var(--ink);border-radius:14px;padding:12px;box-shadow:inset 0 0 0 3px var(--ink-mid);font-family:var(--display);display:flex;flex-direction:column;gap:10px}
+.lcd-top{display:flex;justify-content:space-between;font-size:12px}
+.stage{display:flex;align-items:center;gap:10px}
+canvas{width:112px;height:112px;image-rendering:pixelated;flex:none}
+.bubble{margin:0;font-family:var(--body);font-weight:600;font-size:14px;line-height:1.3;background:var(--ink-soft);border:2px solid var(--ink);border-radius:10px;padding:8px 10px;min-width:0}
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;font-size:11px}
+.seg{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;height:12px}
+.seg i{background:transparent;border:1px solid var(--ink-mid)}
+.seg i.on{background:var(--ink);border-color:var(--ink)}
+.xp{font-size:11px;display:grid;gap:4px}
+.xpbar{height:6px;border:1px solid var(--ink);}
+.xpbar b{display:block;height:100%;background:var(--ink)}
+.daybar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.daybar h2{margin:0;font-size:18px;text-wrap:balance}
+.daybar small{color:var(--muted);display:block;font-weight:400;font-size:13px}
+.navbtn,.ghost{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;min-width:44px;min-height:44px;cursor:pointer}
+.navbtn:disabled{opacity:.35;cursor:default}
+.group{display:flex;flex-direction:column;gap:8px}
+.group h3{margin:0;font-family:var(--display);font-size:12px;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between}
+.habit{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:52px;cursor:pointer}
+.habit .box{width:22px;height:22px;border:2px solid var(--muted);border-radius:6px;flex:none;display:grid;place-items:center;color:#fff;font-size:14px}
+.habit[aria-pressed="true"]{border-color:var(--done)}
+.habit[aria-pressed="true"] .box{background:var(--done);border-color:var(--done)}
+.habit[aria-pressed="true"] .name{color:var(--muted);text-decoration:line-through}
+.row{display:flex;gap:8px;align-items:stretch}
+.row .habit{flex:1;min-width:0}
+.del{font:inherit;background:transparent;color:var(--accent);border:1px solid var(--line);border-radius:12px;min-width:52px;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.empty,.status{color:var(--muted);font-size:14px;margin:0}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+summary{cursor:pointer;font-weight:600}
+form{display:grid;gap:8px;margin-top:10px}
+input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:44px}
+.primary{font:inherit;font-weight:700;background:var(--accent);color:#fff;border:0;border-radius:10px;min-height:44px;cursor:pointer}
+.tools{display:flex;justify-content:flex-end}
+</style>
+
+<main class="wrap">
+  <section class="device" aria-label="Tu personaje">
+    <p class="brand">MINI ESTEBAN</p>
+    <div class="lcd">
+      <div class="lcd-top"><span id="lvl">NV 1</span><span id="streak">RACHA 0</span></div>
+      <div class="stage">
+        <canvas id="pet" width="16" height="16" aria-hidden="true"></canvas>
+        <p class="bubble" id="say" aria-live="polite">Cargando tu progreso…</p>
+      </div>
+      <div class="bars" id="bars"></div>
+      <div class="xp"><span id="xptxt">0 XP</span><div class="xpbar"><b id="xpfill" style="width:0"></b></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="install" hidden>
+    <h2>Instala la app</h2>
+    <p>En Safari toca Compartir y después «Añadir a pantalla de inicio». Abre Mini Esteban desde ese icono para recibir los avisos.</p>
+  </section>
+
+  <form class="card" id="login" hidden>
+    <h2>Entra en tu Mini Esteban</h2>
+    <input id="email" type="email" autocomplete="username" placeholder="Tu email" required>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="Contraseña" required>
+    <button class="primary" type="submit">Entrar</button>
+    <p id="loginMsg"></p>
+  </form>
+
+  <section class="card" id="pushCard" hidden>
+    <h2>Activa los avisos</h2>
+    <p>Te escribiré a las 8:00, 13:00, 18:00 y 22:00 con lo que te falta.</p>
+    <button class="primary" id="pushBtn">Activar avisos</button>
+  </section>
+
+  <div class="daybar">
+    <button class="navbtn" id="prev" aria-label="Día anterior">‹</button>
+    <h2 id="dayTitle">Hoy<small></small></h2>
+    <button class="navbtn" id="next" aria-label="Día siguiente">›</button>
+  </div>
+
+  <section id="list" class="group" aria-live="polite"></section>
+
+  <div class="tools"><button class="ghost" id="edit" style="padding:0 14px">Editar hábitos</button></div>
+
+  <details>
+    <summary>Añadir un hábito</summary>
+    <form id="addForm">
+      <input id="habitName" required maxlength="60" placeholder="Ej.: 20 flexiones">
+      <select id="habitArea">
+        <option value="cuerpo">Cuerpo</option><option value="trabajo">Trabajo</option>
+        <option value="mente">Mente</option><option value="vida">Vida y dinero</option>
+      </select>
+      <button class="primary" type="submit">Añadir</button>
+    </form>
+  </details>
+  <p class="status" id="status"></p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const AREAS=[["cuerpo","Cuerpo"],["trabajo","Trabajo"],["mente","Mente"],["vida","Vida y dinero"]];
+const LINES={cuerpo:"Me pesa el cuerpo. ¿Movemos un poco hoy?",trabajo:"Tengo tareas esperando. Una clave y paramos.",mente:"Necesito 10 minutos sin pantallas.",vida:"¿Hablamos hoy con alguien de la familia?"};
+const $=id=>document.getElementById(id);
+let db=null,habits=[],days={},lastLog=null,offset=0,editing=false,loaded=false,chain=Promise.resolve();
+
+const pad=n=>String(n).padStart(2,"0");
+const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const dayKey=off=>{const d=new Date();d.setDate(d.getDate()+off);return fmt(d)};
+const doneFor=k=>(days[k]&&days[k].done)||{};
+function frac(k,area){const hs=habits.filter(h=>!area||h.area===area);if(!hs.length)return 0;const d=doneFor(k);return hs.filter(h=>d[h.id]).length/hs.length}
+const stat=a=>Math.min(1,frac(dayKey(0),a)+.5*frac(dayKey(-1),a)+.25*frac(dayKey(-2),a));
+function streak(){let n=0,o=frac(dayKey(0))>=.6?0:-1;while(frac(dayKey(o))>=.6&&n<999){n++;o--}return n}
+/* Modo duro: cada día cerrado por debajo del 60 % resta 50 XP; dos seguidos = enfermo */
+const START="2026-10-17";
+function failedDays(){let n=0;for(let o=-1;dayKey(o)>=START;o--)if(frac(dayKey(o))<.6)n++;return n}
+function xp(){let t=0;for(const k in days)t+=Object.values(doneFor(k)).filter(Boolean).length;return Math.max(0,t*10-failedDays()*50)}
+const sick=()=>habits.length&&dayKey(-2)>=START&&frac(dayKey(-1))<.6&&frac(dayKey(-2))<.6&&frac(dayKey(0))<.6;
+
+/* Sprite 16x16: H pelo, S piel, E ojos, T camiseta, P pantalón */
+const BASE=["....HHHHHHHH....","...HHHHHHHHHH...","..HHHHHHHHHHHH..","..HSSSSSSSSSSH..","..SSSSSSSSSSSS..","..SSEESSSSEESS..","..SSEESSSSEESS..","..SSSSSSSSSSSS..","..SSSSSSSSSSSS..","...SSSSSSSSSS...","....SSSSSSSS....","...TTTTTTTTTT...","..TTTTTTTTTTTT..",".STTTTTTTTTTTTS.",".S.PPPPPPPPPP.S.","...PPP....PPP..."];
+let mood="ok",blink=false,bob=0;
+function drawPet(){
+  const c=$("pet"),x=c.getContext("2d"),css=getComputedStyle(document.documentElement);
+  const col={H:css.getPropertyValue("--ink"),S:css.getPropertyValue("--ink-soft"),E:css.getPropertyValue("--ink"),T:css.getPropertyValue("--ink-mid"),P:css.getPropertyValue("--ink")};
+  x.clearRect(0,0,16,16);
+  const px=(cx,cy,k)=>{x.fillStyle=col[k];x.fillRect(cx,cy+bob,1,1)};
+  BASE.forEach((r,y)=>[...r].forEach((k,cx)=>{if(k==="."||y+bob>15)return;if(k==="E"&&(blink||mood==="agotado"||mood==="enfermo")&&y===5)return px(cx,y,"S");px(cx,y,k)}));
+  if(mood==="enfermo"){x.fillStyle=col.T;[[11,8],[12,8],[13,8],[14,8],[14,7]].forEach(([a,b])=>x.fillRect(a,b+bob,1,1))}
+  const m={enfermo:[[6,9],[7,8],[8,9],[9,8]],feliz:[[5,8],[10,8],[6,9],[7,9],[8,9],[9,9]],ok:[[6,9],[7,9],[8,9],[9,9]],triste:[[6,8],[7,8],[8,8],[9,8],[5,9],[10,9]],agotado:[[7,9],[8,9]]}[mood];
+  m.forEach(([a,b])=>px(a,b,"E"));
+  if(mood==="agotado"){x.fillStyle=col.H;[[13,0],[14,0],[14,1],[13,2],[14,2]].forEach(([a,b])=>x.fillRect(a,b,1,1))}
+}
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches){
+  setInterval(()=>{bob=bob?0:(mood==="agotado"?0:1);drawPet()},650);
+  setInterval(()=>{blink=true;drawPet();setTimeout(()=>{blink=false;drawPet()},160)},3800);
+}
+
+function render(){
+  const s=Object.fromEntries(AREAS.map(([a])=>[a,stat(a)]));
+  const avg=AREAS.reduce((t,[a])=>t+s[a],0)/4;
+  mood=!habits.length?"ok":sick()?"enfermo":avg>=.7?"feliz":avg>=.4?"ok":avg>=.2?"triste":"agotado";
+  $("bars").innerHTML=AREAS.map(([a,l])=>{const on=Math.round(s[a]*10);return `<div class="bar"><span>${l.split(" ")[0].toUpperCase()}</span><div class="seg" role="meter" aria-label="${l}" aria-valuemin="0" aria-valuemax="10" aria-valuenow="${on}">${Array.from({length:10},(_,i)=>`<i class="${i<on?"on":""}"></i>`).join("")}</div></div>`}).join("");
+  const X=xp(),lv=Math.floor(X/150)+1;
+  $("lvl").textContent=(mood==="enfermo"?"ENFERMO · ":"")+"NV "+lv;$("streak").textContent="RACHA "+streak();
+  const f=failedDays();
+  $("xptxt").textContent=`${X} XP · faltan ${150-X%150} para NV ${lv+1}`+(f?` · −${f*50} por días fallados`:"");$("xpfill").style.width=(X%150)/1.5+"%";
+  let say;
+  if(!uid&&loaded)say="Entra con tu cuenta para despertarme.";
+  else if(!loaded)say="Cargando tu progreso…";
+  else if(!habits.length)say="Aún no tengo hábitos. Añade uno abajo o pídemelo en el chat.";
+  else if(mood==="enfermo")say=`Estoy enfermo: dos días seguidos sin cumplir. Llega hoy al 60 % para curarme (vas por el ${Math.round(frac(dayKey(0))*100)} %).`;
+  else if(lastLog&&Date.now()-Date.parse(lastLog.at)<20*3600e3)say=lastLog.text;
+  else{const low=AREAS.map(([a])=>a).sort((a,b)=>s[a]-s[b])[0];say=s[low]>=.7?"¡Vamos fuertes! Sigue así.":LINES[low]}
+  $("say").textContent=say;drawPet();
+
+  const k=dayKey(offset),d=new Date();d.setDate(d.getDate()+offset);
+  const label=offset===0?"Hoy":offset===-1?"Ayer":d.toLocaleDateString("es-ES",{weekday:"long"});
+  $("dayTitle").innerHTML="";$("dayTitle").append(label[0].toUpperCase()+label.slice(1));
+  const sm=document.createElement("small");sm.textContent=d.toLocaleDateString("es-ES",{day:"numeric",month:"long"})+` · ${Math.round(frac(k)*100)}% hecho`;$("dayTitle").append(sm);
+  $("next").disabled=offset>=0;$("prev").disabled=offset<=-6;
+
+  const list=$("list");list.innerHTML="";
+  if(!habits.length){const p=document.createElement("p");p.className="empty";p.textContent=loaded?"Tu lista está vacía. Cada hábito que añadas alimenta una barra del personaje.":"Cargando hábitos…";list.append(p);return}
+  const done=doneFor(k);
+  AREAS.forEach(([a,l])=>{
+    const hs=habits.filter(h=>h.area===a);if(!hs.length)return;
+    const g=document.createElement("div");g.className="group";
+    const h3=document.createElement("h3");h3.innerHTML=`<span>${l.toUpperCase()}</span><span>${hs.filter(h=>done[h.id]).length}/${hs.length}</span>`;g.append(h3);
+    hs.forEach(h=>{
+      const row=document.createElement("div");row.className="row";
+      const b=document.createElement("button");b.className="habit";b.setAttribute("aria-pressed",!!done[h.id]);
+      b.innerHTML=`<span class="box">${done[h.id]?"✓":""}</span><span class="name"></span>`;b.querySelector(".name").textContent=h.name;
+      b.onclick=()=>toggle(h);row.append(b);
+      if(editing){const x=document.createElement("button");x.className="del";x.textContent="Quitar";x.setAttribute("aria-label","Quitar "+h.name);x.onclick=()=>removeHabit(h);row.append(x)}
+      g.append(row)});
+    list.append(g)});
+}
+
+const status=t=>$("status").textContent=t;
+const sb=window.supabase.createClient(window.MINI.SUPABASE_URL,window.MINI.SUPABASE_ANON_KEY);
+let uid=null;
+const write=fn=>{chain=chain.then(async()=>{const r=await fn();if(r&&r.error)throw r.error}).then(()=>status("")).catch(()=>status("No se pudo guardar. Revisa la conexión y vuelve a tocar."))};
+function toggle(h){
+  if(!uid)return;
+  const k=dayKey(offset),cur={...doneFor(k)};
+  if(cur[h.id])delete cur[h.id];else cur[h.id]=true;
+  days={...days,[k]:{done:cur}};render();
+  write(()=>sb.from("days").upsert({user_id:uid,day:k,done:cur,updated_at:new Date().toISOString()},{onConflict:"user_id,day"}));
+}
+function removeHabit(h){habits=habits.filter(x=>x.id!==h.id);render();write(()=>sb.from("habits").update({active:false}).eq("id",h.id))}
+$("prev").onclick=()=>{offset--;render()};$("next").onclick=()=>{offset++;render()};
+$("edit").onclick=()=>{editing=!editing;$("edit").textContent=editing?"Listo":"Editar hábitos";render()};
+$("addForm").addEventListener("submit",e=>{e.preventDefault();if(!uid)return;
+  const name=$("habitName").value.trim();if(!name)return;const area=$("habitArea").value;$("habitName").value="";
+  const id=name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"-").slice(0,40)+"-"+Date.now().toString(36);
+  write(async()=>{const r=await sb.from("habits").insert({id,user_id:uid,name,area,ord:Date.now(),active:true});await load();return r});status("Añadido.")});
+
+async function load(){
+  if(!uid)return;
+  const since=dayKey(-60);
+  const [h,d,l]=await Promise.all([
+    sb.from("habits").select("*").eq("active",true).order("ord"),
+    sb.from("days").select("day,done").gte("day",since),
+    sb.from("log").select("at,text").order("at",{ascending:false}).limit(1)]);
+  if(h.error||d.error){status("No pude cargar tus datos. Recarga la app.");return}
+  habits=h.data;const n={};d.data.forEach(r=>n[r.day]={done:r.done||{}});days=n;lastLog=l.data&&l.data[0]||null;
+  render();
+}
+
+/* Avisos push */
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+function b64(u){const p="=".repeat((4-u.length%4)%4),r=atob((u+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(r,c=>c.charCodeAt(0))}
+async function pushState(){
+  if(!uid||!("serviceWorker" in navigator)||!("PushManager" in window)){$("pushCard").hidden=true;return}
+  const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+  $("pushCard").hidden=!!sub&&Notification.permission==="granted";
+}
+$("pushBtn").onclick=async()=>{
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted")return status("Sin permiso no puedo avisarte. Actívalo en Ajustes → Notificaciones → Mini Esteban.");
+    const reg=await navigator.serviceWorker.ready;
+    const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(window.MINI.VAPID_PUBLIC)});
+    const j=sub.toJSON();
+    const r=await sb.from("push_subs").upsert({endpoint:j.endpoint,user_id:uid,sub:j},{onConflict:"endpoint"});
+    if(r.error)throw r.error;
+    status("Avisos activados.");pushState();
+  }catch(e){status("No pude activar los avisos: "+(e.message||e))}
+};
+
+$("login").addEventListener("submit",async e=>{e.preventDefault();$("loginMsg").textContent="Entrando…";
+  const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("pass").value});
+  $("loginMsg").textContent=error?"Email o contraseña incorrectos.":""});
+
+sb.auth.onAuthStateChange((_e,session)=>{
+  uid=session?session.user.id:null;loaded=true;
+  $("login").hidden=!!uid;
+  if(uid){load();pushState()}else{habits=[];days={};render()}
+});
+$("install").hidden=!(isIOS&&!standalone);
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()});
+render();
+</script>
+</body>
+</html>
