@@ -234,6 +234,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
     <div class="bubble" id="bubble"><i></i><span></span></div>
   </section></div>
+  <section class="rescue" id="rescue" hidden aria-live="polite"></section>
   <section class="hero enter" aria-label="Tu progreso de hoy">
     <div class="ring">
       <svg viewBox="0 0 150 150" id="rings" aria-hidden="true"></svg>
@@ -280,6 +281,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
   <div class="tab" id="tab-casa" hidden>
     <div id="roomSlotCasa"></div>
     <p class="roomnote" id="roomNote"></p>
+    <div class="foot"><button class="ghost" id="editLook">✏️ Editar personaje</button><button class="ghost" id="hardToggle"></button></div>
     <section class="chestcard enter">
       <div class="mini-chest" aria-hidden="true"></div>
       <div class="pt"><b id="chestTitle">Cofre de racha</b><small id="chestSub"></small></div>
@@ -351,12 +353,14 @@ const dayKey=off=>fmt(dateOf(off));
 const doneFor=k=>(days[k]&&days[k].done)||{};
 function frac(k,area){const hs=habits.filter(h=>!area||h.area===area);if(!hs.length)return 0;const d=doneFor(k);return hs.filter(h=>d[h.id]).length/hs.length}
 const stat=a=>Math.min(1,frac(dayKey(0),a)+.5*frac(dayKey(-1),a)+.25*frac(dayKey(-2),a));
-function streak(){let n=0,o=frac(dayKey(0))>=.6?0:-1;while(frac(dayKey(o))>=.6&&n<999){n++;o--}return n}
+function streak(){let n=0,o=frac(dayKey(0))>=.6?0:-1;while(okDay(dayKey(o))&&n<999){n++;o--}return n}
 /* Modo duro: cada día cerrado por debajo del 60 % resta 50 XP; dos seguidos = enfermo */
 const START="2026-10-17";
-function failedDays(){let n=0;for(let o=-1;dayKey(o)>=START;o--)if(frac(dayKey(o))<.6)n++;return n}
-function xp(){let t=0;for(const k in days)t+=Object.values(doneFor(k)).filter(Boolean).length;return Math.max(0,t*10-failedDays()*50)}
-const sick=()=>habits.length&&dayKey(-2)>=START&&frac(dayKey(-1))<.6&&frac(dayKey(-2))<.6&&frac(dayKey(0))<.6;
+let HARD=true; /* modo duro: lo decide el perfil (casa.js) */
+function okDay(k){return frac(k)>=.6} /* casa.js lo amplía con escudos y rescates */
+function failedDays(){let n=0;for(let o=-1;dayKey(o)>=START;o--)if(!okDay(dayKey(o)))n++;return n}
+function xp(){let t=0;for(const k in days)t+=Object.values(doneFor(k)).filter(Boolean).length;return Math.max(0,t*10-(HARD?failedDays()*50:0))}
+const sick=()=>HARD&&habits.length&&dayKey(-2)>=START&&!okDay(dayKey(-1))&&!okDay(dayKey(-2))&&frac(dayKey(0))<.6;
 
 /* Personaje 16x16: H pelo, S piel, E ojos, T camiseta, P pantalón */
 const BASE=["....HHHHHHHH....","...HHHHHHHHHH...","..HHHHHHHHHHHH..","..HSSSSSSSSSSH..","..SSSSSSSSSSSS..","..SSEESSSSEESS..","..SSEESSSSEESS..","..SSSSSSSSSSSS..","..SSSSSSSSSSSS..","...SSSSSSSSSS...","....SSSSSSSS....","...TTTTTTTTTT...","..TTTTTTTTTTTT..",".STTTTTTTTTTTTS.",".S.PPPPPPPPPP.S.","...PPP....PPP..."];
@@ -407,7 +411,7 @@ function render(){
 
   const wk=$("week");wk.innerHTML="";
   for(let o=-6;o<=0;o++){const d=dateOf(o),dk=fmt(d),fp=Math.round(frac(dk)*100),b=document.createElement("button");
-    b.className="day"+(o<0&&dk>=START&&habits.length&&fp<60?" fail":"");b.setAttribute("aria-current",o===offset);b.setAttribute("aria-label",d.toLocaleDateString("es-ES",{weekday:"long",day:"numeric"})+`, ${fp} %`);
+    b.className="day"+(o<0&&dk>=START&&habits.length&&!okDay(dk)?" fail":"")+(o<0&&window.dayState?" st-"+dayState(dk):"");b.setAttribute("aria-current",o===offset);b.setAttribute("aria-label",d.toLocaleDateString("es-ES",{weekday:"long",day:"numeric"})+`, ${fp} %`);
     b.innerHTML=`<span>${d.toLocaleDateString("es-ES",{weekday:"narrow"})}</span><b style="--p:${fp}" data-n="${d.getDate()}"></b>`;
     b.onclick=()=>{offset=o;render()};wk.append(b)}
 
@@ -444,8 +448,8 @@ function toggle(h,el){
 }
 function removeHabit(h){habits=habits.filter(x=>x.id!==h.id);render();write(()=>sb.from("habits").update({active:false}).eq("id",h.id))}
 $("edit").onclick=()=>{editing=!editing;$("edit").textContent=editing?"Listo":"Editar";render()};
-$("addBtn").onclick=()=>{$("addForm").hidden=!$("addForm").hidden;if(!$("addForm").hidden)$("habitName").focus()};
-$("addForm").addEventListener("submit",e=>{e.preventDefault();if(!uid)return;
+$("addBtn").onclick=()=>{if(window.slotsLeft&&slotsLeft()<=0){status(slotsMsg());return}$("addForm").hidden=!$("addForm").hidden;if(!$("addForm").hidden)$("habitName").focus()};
+$("addForm").addEventListener("submit",e=>{e.preventDefault();if(!uid)return;if(window.slotsLeft&&slotsLeft()<=0){status("No te quedan huecos: subes uno cada nivel.");return}
   const name=$("habitName").value.trim();if(!name)return;const area=$("habitArea").value;$("habitName").value="";$("addForm").hidden=true;
   const id=name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"-").slice(0,40)+"-"+Date.now().toString(36);
   write(async()=>{const r=await sb.from("habits").insert({id,user_id:uid,name,area,ord:Date.now(),active:true});await load();return r});status("Añadido.")});
@@ -508,5 +512,6 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 render();
 </script>
 <script src="casa.js"></script>
+<script src="onboarding.js"></script>
 </body>
 </html>

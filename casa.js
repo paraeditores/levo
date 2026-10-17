@@ -74,7 +74,7 @@ const PREMIOS = [
 const ALL = [...ROPA, ...MUEBLES, ...ESTILOS];
 
 /* ---------- Monedas, nivel y propiedad ---------- */
-function prevStreak(k) { let n = 0, d = new Date(k + "T12:00:00"); for (let i = 0; i < 60; i++) { d.setDate(d.getDate() - 1); if (frac(fmt(d)) >= .6) n++; else break } return n }
+function prevStreak(k) { let n = 0, d = new Date(k + "T12:00:00"); for (let i = 0; i < 60; i++) { d.setDate(d.getDate() - 1); if (okDay(fmt(d))) n++; else break } return n }
 function earned() {
   let c = 0;
   for (const k in days) {
@@ -82,6 +82,7 @@ function earned() {
     const n = habits.filter(h => doneFor(k)[h.id]).length, f = frac(k);
     let e = 5 * n + (f >= .6 ? 20 : 0) + (f === 1 ? 50 : 0);
     if (prevStreak(k) >= 7) e *= 2;
+    if (HARD) e = Math.round(e * 1.5);
     c += e;
   }
   return c;
@@ -92,13 +93,53 @@ const level = () => Math.floor(xp() / 150) + 1;
 const owned = id => { const it = ALL.find(i => i.id === id); if (it && it.base) return true; if (it && it.lvGift) return level() >= it.lvGift; return purchases.some(p => (p.kind === "item" || p.kind === "cofre") && p.item === id) };
 const activePremio = () => { const now = Date.now(); return purchases.filter(p => p.kind === "premio").map(p => ({ ...p, ends: Date.parse(p.at) + p.minutes * 60e3 })).find(p => p.ends > now) };
 
+/* ---------- Escudos de racha y días de rescate ---------- */
+const ESCUDO = { id: "escudo", name: "Escudo de racha", cost: 100 };
+const shieldsTotal = () => 1 + purchases.filter(p => p.kind === "escudo").length;
+let _prot = null, _protKey = null;
+function protection() {
+  const today = dayKey(0), key = [days, purchases, today];
+  if (_prot && _protKey && _protKey.every((v, i) => v === key[i])) return _prot;
+  let left = shieldsTotal(); const st = {}; const d = new Date(START + "T12:00:00");
+  while (fmt(d) < today) {
+    const k = fmt(d), n = new Date(d); n.setDate(n.getDate() + 1); const nk = fmt(n);
+    if (frac(k) >= .6) st[k] = "ok";
+    else if (frac(nk) === 1) st[k] = "rescate";
+    else if (left > 0) { left--; st[k] = "escudo" }
+    else st[k] = "fallo";
+    d.setDate(d.getDate() + 1);
+  }
+  _protKey = key; return _prot = { st, left };
+}
+okDay = function (k) { if (k < START || k >= dayKey(0)) return frac(k) >= .6; return protection().st[k] !== "fallo" };
+window.dayState = k => (k < START || k >= dayKey(0)) ? "" : (protection().st[k] || "");
+const shieldsLeft = () => protection().left;
+/* Huecos de hábitos: 3 al empezar y 2 más por nivel */
+const slotsTotal = () => 3 + 2 * (level() - 1);
+window.slotsLeft = () => slotsTotal() - habits.length;
+window.slotsMsg = () => { const need = Math.ceil((habits.length + 1 - 3) / 2) + 1; return `Tienes ${habits.length} de ${slotsTotal()} huecos. El siguiente se abre en el nivel ${need}.` };
+function renderRescue() {
+  const el = $("rescue"); if (!el || !uid || !habits.length) { if (el) el.hidden = true; return }
+  const y = dayKey(-1), s = window.dayState(y), today = Math.round(frac(dayKey(0)) * 100);
+  if (s === "escudo" || s === "fallo") {
+    el.hidden = false; el.className = "rescue " + s;
+    el.innerHTML = `<i>${s === "escudo" ? "🛡️" : "🆘"}</i><div class="pt"><b>${s === "escudo" ? "Ayer te salvó un escudo" : "Ayer se rompió tu racha"}</b><small>${s === "escudo" ? "Llega hoy al 100 % y lo recuperas." : "Llega hoy al 100 % y la rescatas."} Vas por el ${today} %.</small></div>`;
+  } else if (s === "rescate" && frac(dayKey(0)) === 1) {
+    el.hidden = false; el.className = "rescue ok"; el.innerHTML = `<i>✨</i><div class="pt"><b>Racha rescatada</b><small>Has convertido un mal día en una victoria.</small></div>`;
+  } else el.hidden = true;
+}
+
 /* ---------- Personaje estilo Habbo ---------- */
 const OUT = "#1b1b1f";
+const SKINS = ["#f6cfae", "#eab38c", "#c98b5f", "#9a6440", "#6b4329"];
+const HAIRS = ["#2a1c14", "#5b3a22", "#a8692e", "#e3b25b", "#c43c2c", "#1f2a52", "#e9e9ee"];
+const LOOK_DEF = { skin: 0, hs: "corto", hc: 0, beard: "no", glasses: "no" };
 function rect(x, a, b, w, h, c) { x.fillStyle = c; x.fillRect(Math.round(a), Math.round(b), w, h) }
 function orect(x, a, b, w, h, c) { rect(x, a - 1, b - 1, w + 2, h + 2, OUT); rect(x, a, b, w, h, c) }
 /* fx, fy = posición de los pies. frame alterna las piernas al andar. */
 function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wave = false) {
-  const skin = "#f6cfae", skinD = "#e2b08c", hair = "#2a1c14";
+  const lk = { ...LOOK_DEF, ...(o._look || {}) };
+  const skin = SKINS[lk.skin] || SKINS[0], skinD = shade(skin, .86), hair = HAIRS[lk.hc] || HAIRS[0];
   const top = (ALL.find(r => r.id === o.top) || {}).c || (md === "enfermo" ? "#98989f" : "#ff2d55");
   const pant = (ALL.find(r => r.id === o.pant) || {}).c || "#2d3a5a";
   const shoe = (ALL.find(r => r.id === o.zapas) || {}).c || "#3a3a3c";
@@ -120,13 +161,22 @@ function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wav
   rect(x, L + 0, T + 8, 1, 3, skin); rect(x, L - 1, T + 8, 1, 3, OUT); // oreja
   // pelo
   const g = ALL.find(r => r.id === o.gorra);
-  if (!g || g.id === "corona") { rect(x, L, T + 1, 15, 4, OUT); rect(x, L + 1, T + 2, 13, 3, hair); rect(x, L + 1, T + 5, 3, 4, hair); rect(x, L, T + 5, 1, 5, OUT) }
+  if (!g || g.id === "corona") {
+    if (lk.hs === "corto") { rect(x, L, T + 1, 15, 4, OUT); rect(x, L + 1, T + 2, 13, 3, hair); rect(x, L + 1, T + 5, 3, 4, hair); rect(x, L, T + 5, 1, 5, OUT) }
+    else if (lk.hs === "rapado") { rect(x, L + 1, T + 2, 13, 3, OUT); rect(x, L + 2, T + 3, 11, 2, shade(hair, 1.15)); rect(x, L + 1, T + 5, 2, 3, shade(hair, 1.15)) }
+    else if (lk.hs === "largo") { rect(x, L - 1, T + 1, 16, 5, OUT); rect(x, L, T + 2, 14, 3, hair); rect(x, L - 1, T + 5, 5, 13, OUT); rect(x, L, T + 5, 3, 12, hair); rect(x, L + 13, T + 5, 2, 7, OUT); rect(x, L + 13, T + 5, 1, 6, hair) }
+    else if (lk.hs === "rizado") { [1, 4, 7, 10, 13].forEach(a => { rect(x, L + a - 2, T - 1, 5, 5, OUT); rect(x, L + a - 1, T, 3, 3, hair) }); rect(x, L, T + 2, 15, 4, OUT); rect(x, L + 1, T + 2, 13, 3, hair); rect(x, L + 1, T + 5, 3, 4, hair); rect(x, L, T + 5, 1, 5, OUT) }
+    else if (lk.hs === "calvo") { rect(x, L + 4, T + 4, 4, 1, shade(skin, 1.12)) }
+  }
   if (g && g.id === "corona") { [[2, -3], [6, -4], [10, -3]].forEach(([a, b]) => orect(x, L + a, T + b, 3, 4, g.c)); orect(x, L + 1, T - 1, 13, 3, g.c); rect(x, L + 6, T, 3, 1, "#ff2d55") }
   else if (g) { orect(x, L + 1, T, 13, 5, g.c); rect(x, L + 1, T + 4, 13, 1, shade(g.c, .75)); if (g.id === "gorro-lana") { orect(x, L + 6, T - 3, 3, 2, "#ffffff") } else orect(x, L + 10, T + 4, 7, 2, g.c); if (g.id === "gorra-holo") rect(x, L + 3, T + 1, 6, 1, "#ffffff") }
+  // barba
+  if (lk.beard === "corta") { x.globalAlpha = .55; rect(x, L + 3, T + 13, 11, 3, hair); x.globalAlpha = 1 }
+  if (lk.beard === "completa") { rect(x, L + 2, T + 10, 2, 5, hair); rect(x, L + 3, T + 13, 11, 3, hair); rect(x, L + 7, T + 11, 6, 1, hair); rect(x, L + 4, T + 16, 9, 1, OUT) }
   // ojos y boca
   const eyesClosed = bl || md === "agotado" || md === "enfermo";
   [[7, 9], [11, 9]].forEach(([a, b]) => { if (eyesClosed) rect(x, L + a, T + b + 1, 2, 1, OUT); else { rect(x, L + a, T + b, 2, 2, OUT); rect(x, L + a, T + b, 1, 1, "#ffffff") } });
-  const gf = ALL.find(r => r.id === o.gafas);
+  const gf = ALL.find(r => r.id === o.gafas) || (lk.glasses === "pasta" ? { c: "#1c1c1e" } : lk.glasses === "sol" ? { c: "#0b0b0f", fill: true } : null);
   if (gf) { rect(x, L + 6, T + 8, 4, gf.fill ? 3 : 1, gf.c); rect(x, L + 10, T + 8, 4, gf.fill ? 3 : 1, gf.c); if (!gf.fill) { rect(x, L + 6, T + 8, 1, 3, gf.c); rect(x, L + 9, T + 8, 1, 3, gf.c); rect(x, L + 10, T + 8, 1, 3, gf.c); rect(x, L + 13, T + 8, 1, 3, gf.c) } rect(x, L + 4, T + 8, 2, 1, gf.c) }
   const M = { feliz: [[8, 12, 4, 1], [7, 11, 1, 1], [12, 11, 1, 1]], ok: [[8, 12, 4, 1]], triste: [[8, 12, 4, 1], [7, 13, 1, 1], [12, 13, 1, 1]], agotado: [[9, 12, 2, 1]], enfermo: [[8, 12, 1, 1], [9, 13, 1, 1], [10, 12, 1, 1], [11, 13, 1, 1]] }[md] || [[8, 12, 4, 1]];
   M.forEach(([a, b, w, h]) => rect(x, L + a, T + b, w, h, "#8a3b2a"));
@@ -274,8 +324,8 @@ function iconFor(it) {
 }
 
 /* ---------- Insignias ---------- */
-function maxStreak() { let best = 0, cur = 0; const ks = Object.keys(days).filter(k => k >= START).sort(); let prev = null; ks.forEach(k => { const ok = frac(k) >= .6; const cont = prev && (new Date(k) - new Date(prev)) / 864e5 === 1; cur = ok ? (cont ? cur + 1 : 1) : 0; best = Math.max(best, cur); prev = k }); return best }
-const countHabit = id => Object.keys(days).filter(k => doneFor(k)[id]).length;
+function maxStreak() { let best = 0, cur = 0; const ks = Object.keys(days).filter(k => k >= START).sort(); let prev = null; ks.forEach(k => { const ok = okDay(k); const cont = prev && (new Date(k) - new Date(prev)) / 864e5 === 1; cur = ok ? (cont ? cur + 1 : 1) : 0; best = Math.max(best, cur); prev = k }); return best }
+const countHabit = id => Object.keys(days).filter(k => Object.keys(doneFor(k)).some(h => doneFor(k)[h] && (h === id || h.startsWith(id + "-")))).length;
 const totalDone = () => Object.keys(days).reduce((t, k) => t + Object.values(doneFor(k)).filter(Boolean).length, 0);
 const INSIGNIAS = [
   { id: "primer", name: "Primer paso", desc: "Marca tu primer hábito", ico: "👣", c: "#30d158", v: () => totalDone(), goal: 1 },
@@ -332,6 +382,9 @@ function renderCasa() {
   }
   if (tab === "premios") {
     const a = activePremio(), g = $("premios"); g.innerHTML = "";
+    const sh = document.createElement("button"); sh.className = "premio shieldrow";
+    sh.innerHTML = `<span class="ico">🛡️</span><span class="pt"><b>Escudo de racha</b><small>Tienes ${shieldsLeft()} · salva un día malo automáticamente</small></span><span class="cost">${money(ESCUDO.cost)}</span>`;
+    sh.disabled = c < ESCUDO.cost; sh.onclick = () => buy(ESCUDO, "escudo"); g.append(sh);
     PREMIOS.forEach(p => {
       const d = document.createElement("button"); d.className = "premio";
       d.innerHTML = `<span class="ico">${p.ico}</span><span class="pt"><b></b><small>${c < p.cost ? `Te faltan ${p.cost - c} monedas` : `${p.min} min de temporizador`}</small></span><span class="cost">${money(p.cost)}</span>`; d.querySelector("b").textContent = p.name;
@@ -347,7 +400,8 @@ function renderCasa() {
       e.innerHTML = `<i>${b.ico}</i><b></b><small>${done ? "Conseguida" : `${v}/${b.goal}`}</small>`; e.querySelector("b").textContent = b.name; e.title = b.desc; ins.append(e) });
     $("insCount").textContent = `${INSIGNIAS.filter(b => b.v() >= b.goal).length} de ${INSIGNIAS.length}`;
   }
-  renderCofres(); renderTimer(); checkLevelUp();
+  renderCofres(); renderTimer(); renderRescue(); checkLevelUp();
+  if (window.onboardingRender) onboardingRender();
 }
 
 /* ---------- Subida de nivel ---------- */
@@ -372,7 +426,7 @@ function showReward(label, color, name, hint, it) {
 /* ---------- Cofres de racha ---------- */
 function milestones() {
   let n = 0;
-  for (const k of Object.keys(days).sort()) { if (k < START || frac(k) < .6) continue; if ((prevStreak(k) + 1) % 7 === 0) n++ }
+  for (const k of Object.keys(days).sort()) { if (k < START || !okDay(k)) continue; if ((prevStreak(k) + 1) % 7 === 0) n++ }
   return n;
 }
 const bongoUnlocked = () => milestones() >= 2;
@@ -434,7 +488,7 @@ async function buy(it, kind) {
   if (!uid) return;
   const row = { user_id: uid, item: it.id, kind, cost: it.cost, minutes: it.min || null, at: new Date().toISOString() };
   purchases = [...purchases, row]; renderCasa(); burst($(kind === "premio" ? "premios" : "room"));
-  status(kind === "premio" ? `Premio activado: ${it.name}.` : `Comprado: ${it.name}.`);
+  status(kind === "premio" ? `Premio activado: ${it.name}.` : kind === "escudo" ? "Escudo comprado. Te protegerá en un día malo." : `Comprado: ${it.name}.`);
   if (kind === "item" && it.slot) wear(it);
   write(() => sb.from("purchases").insert(row));
 }
@@ -448,7 +502,8 @@ async function loadCasa() {
   if (!uid || uid === "demo") { renderCasa(); return }
   const [p, o] = await Promise.all([sb.from("purchases").select("item,kind,cost,minutes,at").order("at"), sb.from("profile").select("outfit").maybeSingle()]);
   if (!p.error) purchases = p.data; if (!o.error && o.data) outfit = o.data.outfit || {};
-  renderCasa();
+  HARD = outfit._cfg ? !!outfit._cfg.hard : true;
+  render(); renderCasa(); if (window.maybeOnboard) maybeOnboard();
 }
 function setTab(t) {
   tab = t; ["hoy", "casa", "premios"].forEach(n => { $("tab-" + n).hidden = n !== t; $("tb-" + n).setAttribute("aria-selected", n === t) });
@@ -460,6 +515,6 @@ document.querySelectorAll("[data-shop]").forEach(b => b.onclick = () => { casaTa
 window.onRendered = renderCasa;
 window.loadCasa = loadCasa;
 
-if (uid === "demo") { milestones = () => 2; xp = () => 470; purchases = ["alfombra", "cama", "escritorio", "setup", "planta", "estanteria", "silla", "cuadro", "gorra-negra", "cadena-oro", "vaqueros"].map(item => ({ item, kind: "item", cost: 0, at: "2026-10-17T10:00:00Z" })); outfit = { gorra: "gorra-negra", cadena: "cadena-oro", pant: "vaqueros" } }
+if (uid === "demo" && location.hash === "#demo") { milestones = () => 2; xp = () => 470; purchases = ["alfombra", "cama", "escritorio", "setup", "planta", "estanteria", "silla", "cuadro", "gorra-negra", "cadena-oro", "vaqueros"].map(item => ({ item, kind: "item", cost: 0, at: "2026-10-17T10:00:00Z" })); outfit = { gorra: "gorra-negra", cadena: "cadena-oro", pant: "vaqueros" } }
 renderCasa();
 requestAnimationFrame(loop);
