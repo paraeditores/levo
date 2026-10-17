@@ -395,9 +395,10 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 function drawHero() {
-  const cv = $("heroAv"); if (!cv || cv.offsetParent === null) return; const x = cv.getContext("2d"); x.imageSmoothingEnabled = false; x.clearRect(0, 0, 60, 60);
-  const jy = me.jump > 0 ? Math.round(Math.sin((1 - me.jump / .5) * Math.PI) * 6) : 0, bobH = mood === "enfermo" || mood === "agotado" ? 0 : Math.round(Math.sin(Date.now() / 500));
-  drawAvatar(x, 30, 55 - jy - bobH, { ...outfit, _evo: window._evoCache }, mood, blink, jy ? 1 : 0, me.wave > 0 || jy > 0);
+  const cv = $("heroAv"); if (!cv || cv.offsetParent === null || typeof drawAvatarHD !== "function") return; const x = cv.getContext("2d"); x.imageSmoothingEnabled = false; x.clearRect(0, 0, 64, 100);
+  const jy = me.jump > 0 ? Math.round(Math.sin((1 - me.jump / .5) * Math.PI) * 10) : 0, bobH = mood === "enfermo" || mood === "agotado" ? 0 : Math.round(Math.sin(Date.now() / 500));
+  drawAvatarHD(x, 32, 96 - jy - bobH, { ...outfit, _evo: window._evoCache }, mood, blink, jy ? 1 : 0, me.wave > 0 || jy > 0);
+  const hs = $("heroSay"); if (hs) { const t = window._sayOverride && window._sayOverride.until > Date.now() ? window._sayOverride.text : $("say").textContent; if (hs.dataset.t !== t) { hs.dataset.t = t; hs.textContent = t } }
 }
 drawPet = function () { /* el personaje vive en la habitación */ };
 
@@ -630,12 +631,11 @@ async function loadCasa() {
   if (!uid || uid === "demo") { renderCasa(); return }
   const [p, o] = await Promise.all([sb.from("purchases").select("item,kind,cost,minutes,at").order("at"), sb.from("profile").select("outfit").maybeSingle()]);
   if (!p.error) purchases = p.data; if (!o.error && o.data) outfit = o.data.outfit || {};
-  HARD = outfit._cfg ? !!outfit._cfg.hard : true;
+  HARD = outfit._cfg ? !!outfit._cfg.hard : true; if (outfit._cfg && outfit._cfg.start) START = outfit._cfg.start;
   render(); renderCasa(); if (window.maybeOnboard) maybeOnboard();
 }
 function setTab(t) {
   tab = t; ["hoy", "casa", "premios", "amigos"].forEach(n => { $("tab-" + n).hidden = n !== t; $("tb-" + n).setAttribute("aria-selected", n === t) });
-  const slot = $(t === "casa" ? "roomSlotCasa" : "roomSlotHoy"); if (slot && (t === "hoy" || t === "casa")) slot.append($("roomWrap"));
   window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" }); renderCasa(); if (window.onTab) onTab(t);
 }
 ["hoy", "casa", "premios", "amigos"].forEach(n => $("tb-" + n).onclick = () => setTab(n));

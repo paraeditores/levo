@@ -45,7 +45,7 @@ obCss.textContent = `
 .stage::before{content:"";position:absolute;bottom:6px;width:180px;height:46px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--fg) 18%,transparent),transparent)}
 .stage::after{content:"";position:absolute;inset:10px 20px 30px;border-radius:50%;background:conic-gradient(from 0deg,#ff2d5555,#ff9f0a55,#30d15855,#0a84ff55,#ff2d5555);filter:blur(30px);animation:spin 12s linear infinite;z-index:0}
 @keyframes spin{to{transform:rotate(1turn)}}
-.stage canvas{position:relative;z-index:1;width:192px;height:208px;image-rendering:pixelated}
+.stage canvas{position:relative;z-index:1;width:128px;height:200px;image-rendering:pixelated}
 .dice{position:absolute;right:0;top:6px;z-index:2;width:44px;height:44px;border-radius:14px;border:0;background:var(--surface);font-size:22px;box-shadow:0 4px 14px rgba(0,0,0,.12);transition:transform .3s var(--spring)}
 .dice:active{transform:rotate(-20deg) scale(.9)}
 .opt{display:grid;gap:10px}
@@ -121,11 +121,11 @@ function draw() {
   body.innerHTML = ""; const w = document.createElement("div"); w.className = ob.lastStep === ob.step ? "" : "slide"; ob.lastStep = ob.step; requestAnimationFrame(() => body.scrollTop = keep); w.style.cssText = "display:flex;flex-direction:column;gap:20px"; body.append(w);
   const next = $("obNext"); next.disabled = false;
   if (s === "hola") {
-    w.innerHTML = `<h1>Tú, en versión <em>pixel</em>.<br>Subiendo de nivel.</h1><p class="lead">Cada hábito que cumples hace crecer a tu personaje, su casa y tus premios. Si fallas, también lo nota.</p><div class="stage"><canvas id="obCv" width="48" height="52"></canvas></div>`;
+    w.innerHTML = `<h1>Tú, en versión <em>pixel</em>.<br>Subiendo de nivel.</h1><p class="lead">Cada hábito que cumples hace crecer a tu personaje, su casa y tus premios. Si fallas, también lo nota.</p><div class="stage"><canvas id="obCv" width="64" height="100"></canvas></div>`;
     next.textContent = "Crear mi personaje";
   }
   if (s === "look") {
-    w.innerHTML = `<h1>${ob.edit ? "Tu personaje" : "¿Cómo eres?"}</h1><input id="obName" maxlength="18" placeholder="Tu nombre (lo verán tus amigos)" autocomplete="given-name"><div class="stage"><canvas id="obCv" width="48" height="52"></canvas><button class="dice" id="obDice" aria-label="Aspecto aleatorio">🎲</button></div>`;
+    w.innerHTML = `<h1>${ob.edit ? "Tu personaje" : "¿Cómo eres?"}</h1><input id="obName" maxlength="18" placeholder="Tu nombre (lo verán tus amigos)" autocomplete="given-name"><div class="stage"><canvas id="obCv" width="64" height="100"></canvas><button class="dice" id="obDice" aria-label="Aspecto aleatorio">🎲</button></div>`;
     const group = (label, items, key, isSw) => {
       const g = document.createElement("div"); g.className = "opt"; g.innerHTML = `<span>${label}</span><div class="row-sc"></div>`;
       const row = g.querySelector(".row-sc");
@@ -173,8 +173,8 @@ async function next() {
   const s = ob.steps[ob.step];
   if (ob.step < ob.steps.length - 1) { ob.step++; draw(); return }
   // guardar
-  outfit = { ...outfit, _look: ob.look, _cfg: { ...(outfit._cfg || {}), hard: ob.hard, onb: true, name: ob.name || (outfit._cfg && outfit._cfg.name) || "" } };
-  HARD = ob.hard;
+  outfit = { ...outfit, _look: ob.look, _cfg: { ...(outfit._cfg || {}), hard: ob.hard, onb: true, start: (outfit._cfg && outfit._cfg.start) || (ob.edit ? undefined : dayKey(0)), name: ob.name || (outfit._cfg && outfit._cfg.name) || "" } };
+  HARD = ob.hard; if (outfit._cfg.start) START = outfit._cfg.start;
   if (!ob.demo && uid && uid !== "demo") {
     write(() => sb.from("profile").upsert({ user_id: uid, outfit, updated_at: new Date().toISOString() }, { onConflict: "user_id" }));
     if (!ob.edit) {
@@ -192,7 +192,7 @@ async function next() {
 function tickPreview() {
   if (!ob.open) return;
   const cv = $("obCv");
-  if (cv) { const x = cv.getContext("2d"); x.imageSmoothingEnabled = false; x.clearRect(0, 0, 48, 52); if (ob.wave > 0) ob.wave -= 1 / 30; drawAvatar(x, 24, 48, { ...outfit, _look: ob.look }, "feliz", blink, 0, ob.wave > 0 || ob.steps[ob.step] === "hola" && Math.floor(Date.now() / 900) % 3 === 0) }
+  if (cv) { const x = cv.getContext("2d"); x.imageSmoothingEnabled = false; x.clearRect(0, 0, 64, 100); if (ob.wave > 0) ob.wave -= 1 / 30; drawAvatarHD(x, 32, 96, { ...outfit, _look: ob.look }, "feliz", blink, 0, ob.wave > 0 || ob.steps[ob.step] === "hola" && Math.floor(Date.now() / 900) % 3 === 0) }
   setTimeout(tickPreview, 33);
 }
 window.maybeOnboard = () => { if (uid && uid !== "demo" && !(outfit._cfg && outfit._cfg.onb) && !ob.open) openOnboarding(false) };

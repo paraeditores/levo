@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Levo</title>
+<meta name="levo-version" content="mvczg7k4">
 <meta name="description" content="La app de hábitos donde tu yo pixel sube de nivel cuando tú cumples.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -232,10 +233,10 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:370px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.areas{grid-template-columns:repeat(2,1fr)}}
 </style>
-<link rel="stylesheet" href="levo.css">
+<link rel="stylesheet" href="levo.css?v=mvczg7k4">
 <style>
-.hero2{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center}
-#heroAv{width:120px;height:120px;image-rendering:pixelated;border-radius:20px;background:radial-gradient(circle at 50% 72%,color-mix(in srgb,var(--stage,#8d8d99) 34%,transparent),transparent 68%),var(--surface2)}
+.hero2{display:grid;grid-template-columns:128px 1fr;gap:16px;align-items:center}
+#heroAv{width:128px;height:200px;image-rendering:pixelated;border-radius:20px;background:radial-gradient(circle at 50% 72%,color-mix(in srgb,var(--stage,#8d8d99) 34%,transparent),transparent 68%),var(--surface2)}
 .prog-main{display:grid;gap:10px;min-width:0}
 .prog-main .prog-top{flex-wrap:wrap;row-gap:2px}
 .prog-main .prog-xp{flex-wrap:wrap;row-gap:2px}
@@ -260,7 +261,7 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 <main class="wrap">
   <header>
     <div class="logo"><small id="today">Hoy</small><b>Levo</b></div>
-    <div class="chips"><button class="chip gift" id="chestChip" hidden></button><span class="chip" id="coinsHoy"></span><span class="chip hot" id="streak">0 días</span><span id="lvl" hidden></span></div>
+    <div class="chips"><button class="chip gift" id="chestChip" hidden></button><span class="chip" id="coinsHoy"></span><span class="chip hot" id="streak">0 días</span><span id="lvl" hidden></span><button class="mebtn" id="meBtn" aria-label="Tu perfil y ajustes"><img id="meImg" alt=""></button></div>
   </header>
 
   <section class="card enter" id="install" hidden>
@@ -281,12 +282,6 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 
   <!-- HOY: marcar hábitos -->
   <div class="tab" id="tab-hoy">
-    <div id="roomSlotHoy"><section class="habroom" id="roomWrap">
-      <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
-      <div class="bubble" id="bubble"><i></i><span></span></div>
-      <button class="dchip" id="dailyChip" hidden></button>
-      <button class="movebtn" id="moveBtn">↔ Mover muebles</button>
-    </section></div>
     <section class="rescue" id="rescue" hidden aria-live="polite"></section>
     <section class="card enter" id="pushCard" hidden>
       <h2>Activa los avisos</h2>
@@ -294,11 +289,13 @@ body:not([data-tab="hoy"]) .dchip{display:none}
       <button class="btn accent" id="pushBtn">Activar avisos</button>
     </section>
     <section class="prog hero2" aria-label="Tu personaje y tu progreso de hoy">
-      <canvas id="heroAv" width="60" height="60" aria-hidden="true"></canvas>
+      <canvas id="heroAv" width="64" height="100" aria-label="Tu personaje: toca para abrir el armario"></canvas>
       <div class="prog-main">
         <div class="prog-top"><b id="progTitle">Hoy</b><span id="progSub"></span></div>
         <div class="bar big"><b id="progFill" style="width:0"></b></div>
         <div class="prog-xp"><span id="progLvl"></span><span id="progNext"></span></div>
+        <p class="hero-say" id="heroSay" aria-live="polite"></p>
+        <button class="dchip" id="dailyChip" hidden></button>
       </div>
     </section>
     <nav class="week" id="week" aria-label="Últimos 7 días"></nav>
@@ -322,10 +319,13 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 
   <!-- CASA: tu habitación y la tienda -->
   <div class="tab" id="tab-casa" hidden>
-    <div id="roomSlotCasa"></div>
+    <div id="roomSlotCasa"><section class="habroom" id="roomWrap">
+      <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
+      <div class="bubble" id="bubble"><i></i><span></span></div>
+      <button class="movebtn" id="moveBtn">↔ Mover muebles</button>
+    </section></div>
     <p class="roomnote" id="roomNote"></p>
-    <div class="foot"><button class="ghost" id="editLook">✏️ Editar personaje</button><button class="ghost" id="hardToggle"></button><button class="ghost sndbtn" id="sndBtn"></button></div>
-    <button class="bodyrow" id="bodyRow"></button>
+    <button class="wardbtn" id="wardBtn">👕 Abrir armario</button>
     <section class="amplia" id="amplia"></section>
     <h2 class="sec">Tienda</h2>
     <section class="season" id="season" hidden></section>
@@ -411,6 +411,25 @@ body:not([data-tab="hoy"]) .dchip{display:none}
   </div>
 </div>
 
+<div class="modal" id="meModal" hidden role="dialog" aria-label="Tu perfil y ajustes">
+  <div class="modal-in mesheet">
+    <div class="me-head"><img id="meBig" alt=""><div><b id="meName">Tu perfil</b><small id="meSub"></small></div></div>
+    <div class="me-list">
+      <button class="me-row" id="editLook"><div><span>Editar personaje</span><small>Nombre, aspecto y complexión</small></div><span class="go">›</span></button>
+      <button class="me-row" id="wardRow"><div><span>Armario</span><small>Cambia de ropa cuando quieras</small></div><span class="go">›</span></button>
+      <button class="me-row bodyrow" id="bodyRow"></button>
+      <button class="me-row" id="hardToggle"></button>
+      <button class="me-row" id="sndBtn"></button>
+      <button class="me-row" id="pushRow"></button>
+    </div>
+    <div class="me-list danger">
+      <button class="me-row" id="resetBtn"></button>
+      <button class="me-row" id="logoutBtn"><div><span>Cerrar sesión</span></div></button>
+    </div>
+    <button class="ghost" id="meClose">Cerrar</button>
+  </div>
+</div>
+
 <nav class="tabbar" aria-label="Secciones">
   <button id="tb-hoy" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.6 2.5L16 9.5"/></svg>Hoy</button>
   <button id="tb-casa" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5V20H4z"/><path d="M10 20v-5h4v5"/></svg>Casa</button>
@@ -419,7 +438,7 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
+<script src="config.js?v=mvczg7k4"></script>
 <script>
 const AREAS=[["cuerpo","Cuerpo"],["trabajo","Trabajo"],["mente","Mente"],["vida","Vida"]];
 const LINES={cuerpo:"Me pesa el cuerpo. ¿Movemos un poco hoy?",trabajo:"Tengo tareas esperando. Una clave y paramos.",mente:"Necesito 10 minutos sin pantallas.",vida:"¿Hablamos hoy con alguien de la familia?"};
@@ -597,13 +616,16 @@ if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()});
 render();
 </script>
-<script src="casa.js"></script>
-<script src="onboarding.js"></script>
-<script src="daily.js"></script>
-<script src="share.js"></script>
-<script src="friends.js"></script>
-<script src="ux.js"></script>
-<script src="juice.js"></script>
-<script src="body.js"></script>
+<script src="avatar-hd.js?v=mvczg7k4"></script>
+<script src="casa.js?v=mvczg7k4"></script>
+<script src="onboarding.js?v=mvczg7k4"></script>
+<script src="daily.js?v=mvczg7k4"></script>
+<script src="share.js?v=mvczg7k4"></script>
+<script src="friends.js?v=mvczg7k4"></script>
+<script src="ux.js?v=mvczg7k4"></script>
+<script src="juice.js?v=mvczg7k4"></script>
+<script src="profile.js?v=mvczg7k4"></script>
+<script src="wardrobe.js?v=mvczg7k4"></script>
+<script src="body.js?v=mvczg7k4"></script>
 </body>
 </html>

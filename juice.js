@@ -77,7 +77,7 @@ const REACT = {
   mente: ["Mente en calma", "Cerebro más fuerte", "Eso suma"],
   vida: ["La vida también cuenta", "Bien hecho", "Esto es equilibrio"],
 };
-function avatarScreen() { const cv = $("room"); if (!cv || cv.offsetParent === null) return null; const [ax, ay] = P(me.x, me.y), r = cv.getBoundingClientRect(), k = r.width / cv.width; return { x: r.left + ax * k, y: r.top + (ay - 40) * k, k, r } }
+function avatarScreen() { const hv = $("heroAv"); if (hv && hv.offsetParent !== null) { const r = hv.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * .22, r, hero: true } } const cv = $("room"); if (!cv || cv.offsetParent === null) return null; const [ax, ay] = P(me.x, me.y), r = cv.getBoundingClientRect(), k = r.width / cv.width; return { x: r.left + ax * k, y: r.top + (ay - 40) * k, k, r } }
 function flyCoins(fromEl, n = 3) {
   const to = $("coinsHoy"); if (!fromEl || !to || still) return;
   const a = fromEl.getBoundingClientRect(), b = to.getBoundingClientRect(), src = pixIcon("coin", 2);
@@ -89,7 +89,7 @@ function flyCoins(fromEl, n = 3) {
   setTimeout(() => play("coin"), 600);
 }
 function xpPop(text) {
-  const w = $("roomWrap"), s = avatarScreen(); if (!w || !s) return;
+  const s = avatarScreen(); if (!s) return; const w = s.hero ? $("heroAv").parentElement : $("roomWrap"); if (!w) return; w.style.position = w.style.position || "relative";
   const p = document.createElement("span"); p.className = "xpop"; p.textContent = text;
   const wr = w.getBoundingClientRect(); p.style.left = (s.x - wr.left - 14) + "px"; p.style.top = (s.y - wr.top - 30) + "px"; w.append(p); setTimeout(() => p.remove(), 900);
 }
@@ -123,7 +123,7 @@ function celebrate(force) {
   el.innerHTML = `<canvas class="fw"></canvas><div class="celeb-in">
     <div class="celeb-kicker">${d.toLocaleDateString("es-ES", { day: "numeric", month: "long" }).toUpperCase()} · ${habits.length} DE ${habits.length}</div>
     <h1>Día completo</h1>
-    <canvas class="celeb-av" width="64" height="64"></canvas>
+    <canvas class="celeb-av" width="64" height="100"></canvas>
     <div class="celeb-stats">
       <div><img alt="" src="${pixIcon("flame", 3)}"><b id="cStreak">${Math.max(0, st - 1)}</b><small>días de racha</small></div>
       <div><img alt="" src="${pixIcon("coin", 3)}"><b>+50</b><small>bonus del día</small></div>
@@ -145,7 +145,7 @@ function celebrate(force) {
     if (!still && t - last > 520) { boom(); last = t }
     fx.fillStyle = "rgba(10,10,18,.22)"; fx.fillRect(0, 0, fw.width, fw.height);
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx; p.y += p.vy; p.vy += .06; p.vx *= .985; p.life -= .009; if (p.life <= 0) { parts.splice(i, 1); continue } fx.globalAlpha = p.life; fx.fillStyle = p.c; fx.fillRect(p.x, p.y, 3, 3) } fx.globalAlpha = 1;
-    const ph = Math.floor(t / 260) % 4; ax.clearRect(0, 0, 64, 64); drawAvatar(ax, 32, 58 - (ph % 2 ? 6 : 0), { ...outfit, _evo: window._evoCache }, "feliz", false, ph % 2 ? 1 : 2, ph < 2);
+    const ph = Math.floor(t / 260) % 4; ax.clearRect(0, 0, 64, 100); drawAvatarHD(ax, 32, 96 - (ph % 2 ? 8 : 0), { ...outfit, _evo: window._evoCache }, "feliz", false, ph % 2 ? 1 : 2, ph < 2);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame); boom();
@@ -197,4 +197,4 @@ const _drJ = window.dailyRender; window.dailyRender = () => { if (_drJ) _drJ(); 
 if ($("sndBtn")) $("sndBtn").onclick = toggleSound;
 render(); decorate();
 /* Capturas de demostración: ?shot=celebra | casa | premios (solo con #demo) */
-(() => { const shot = new URLSearchParams(location.search).get("shot"); if (!shot || location.hash !== "#demo") return; document.documentElement.classList.add("shot"); if (shot === "celebra") setTimeout(() => celebrate(true), 300); else if (shot !== "cuerpo") setTab(shot) })();
+(() => { const shot = new URLSearchParams(location.search).get("shot"); if (!shot || location.hash !== "#demo") return; document.documentElement.classList.add("shot"); if (shot === "celebra") setTimeout(() => celebrate(true), 300); else if (!["cuerpo", "armario"].includes(shot)) setTab(shot) })();

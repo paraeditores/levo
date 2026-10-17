@@ -25,3 +25,16 @@ const _drC = window.dailyRender; window.dailyRender = () => { if (_drC) _drC(); 
   if (location.hash === "#demo" || location.hash === "#onb") return;
   try { const c = JSON.parse(localStorage.getItem(CK) || "null"); if (c && !habits.length) { habits = c.habits || []; days = c.days || {}; lastLog = c.lastLog || null; purchases = c.purchases || []; outfit = c.outfit || {}; if (c.START) START = c.START; HARD = outfit._cfg ? !!outfit._cfg.hard : true; render() } } catch (e) { }
 })();
+
+/* Actualización automática: al volver a la app, si hay versión nueva publicada, se recarga sola */
+const LV = (document.querySelector(meta[name=levo-version]) || {}).content;
+async function checkUpdate() {
+  if (!LV || location.hash === "#demo") return;
+  try {
+    const j = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
+    const busy = document.querySelector(".modal:not([hidden]), .celeb, .onb:not([hidden])") || (window.editing2);
+    if (j.v && j.v !== LV && !busy) location.reload();
+  } catch (e) { }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate() });
+setTimeout(checkUpdate, 2500);
