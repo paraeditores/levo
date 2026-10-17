@@ -14,6 +14,12 @@ const ROPA = [
   { id: "zapas-blancas", slot: "zapas", name: "Zapatillas blancas", cost: 100, c: "#f5f5f7" },
   { id: "zapas-rojas", slot: "zapas", name: "Zapatillas rojas", cost: 120, c: "#ff3b30" },
   { id: "cadena-oro", slot: "cadena", name: "Cadena de oro", cost: 250, c: "#ffd60a" },
+  { id: "gorra-holo", slot: "gorra", name: "Gorra holográfica", rarity: "raro", c: "#64d2ff" },
+  { id: "zapas-neon", slot: "zapas", name: "Zapatillas neón", rarity: "raro", c: "#32d74b" },
+  { id: "sudadera-galaxia", slot: "top", name: "Sudadera galaxia", rarity: "epico", c: "#6e3cff" },
+  { id: "gafas-cyber", slot: "gafas", name: "Gafas cyber", rarity: "epico", c: "#ff2d55", fill: true },
+  { id: "corona", slot: "gorra", name: "Corona", rarity: "legendario", c: "#ffd60a" },
+  { id: "aura", slot: "aura", name: "Aura dorada", rarity: "legendario", c: "#ffcc00" },
 ];
 const MUEBLES = [
   { id: "alfombra", area: "vida", name: "Alfombra", cost: 90, lv: 1 },
@@ -30,7 +36,13 @@ const MUEBLES = [
   { id: "hucha", area: "vida", name: "Hucha", cost: 120, lv: 3 },
   { id: "sofa", area: "vida", name: "Sofá", cost: 200, lv: 3 },
   { id: "setup", area: "trabajo", name: "Setup de 3 pantallas", cost: 300, lv: 4, needs: "escritorio" },
+  { id: "neon", name: "Neón LEVO", rarity: "raro", c: "#ff2d55" },
+  { id: "colgantes", name: "Plantas colgantes", rarity: "raro", c: "#30d158" },
+  { id: "arcade", name: "Máquina arcade", rarity: "epico", c: "#5e5ce6" },
+  { id: "acuario", name: "Acuario", rarity: "epico", c: "#0a84ff" },
+  { id: "trofeo", name: "Trofeo de oro", rarity: "legendario", c: "#ffd60a" },
 ];
+const RAREZA = { raro: { name: "Raro", c: "#0a84ff" }, epico: { name: "Épico", c: "#af52de" }, legendario: { name: "Legendario", c: "#ffb800" } };
 const PREMIOS = [
   { id: "redes15", name: "15 min de Instagram o YouTube", cost: 40, min: 15, ico: "📱" },
   { id: "descanso30", name: "30 min de descanso total", cost: 60, min: 30, ico: "☕" },
@@ -53,7 +65,7 @@ function earned() {
 }
 const spent = () => purchases.reduce((t, p) => t + p.cost, 0);
 const coins = () => Math.max(0, earned() - spent());
-const owned = id => purchases.some(p => p.kind === "item" && p.item === id);
+const owned = id => purchases.some(p => (p.kind === "item" || p.kind === "cofre") && p.item === id);
 const level = () => Math.floor(xp() / 150) + 1;
 const activePremio = () => { const now = Date.now(); return purchases.filter(p => p.kind === "premio").map(p => ({ ...p, ends: Date.parse(p.at) + p.minutes * 60e3 })).find(p => p.ends > now) };
 
@@ -67,7 +79,8 @@ function spritePixels(o, md, bl) {
   const mouth = { enfermo: [[6, 9], [7, 8], [8, 9], [9, 8]], feliz: [[5, 8], [10, 8], [6, 9], [7, 9], [8, 9], [9, 9]], ok: [[6, 9], [7, 9], [8, 9], [9, 9]], triste: [[6, 8], [7, 8], [8, 8], [9, 8], [5, 9], [10, 9]], agotado: [[7, 9], [8, 9]] }[md] || [];
   mouth.forEach(([x, y]) => px.push([x, y, ink]));
   const g = ROPA.find(r => r.id === o.gorra);
-  if (g) { for (let y = 0; y < 3; y++) for (let x = 2; x < 14; x++) if (BASE[y][x] !== ".") px.push([x, y, g.c]); if (g.id !== "gorro-lana") for (let x = 1; x < 8; x++) px.push([x, 3, g.c]); else px.push([7, 0, "#fff"], [8, 0, "#fff"]) }
+  if (g && g.id === "corona") { [[3, 0], [6, 0], [9, 0], [12, 0]].forEach(p => px.push([...p, g.c])); for (let y = 1; y < 3; y++) for (let x = 3; x < 13; x++) px.push([x, y, y === 2 && x % 3 === 1 ? "#ff2d55" : g.c]) }
+  else if (g) { for (let y = 0; y < 3; y++) for (let x = 2; x < 14; x++) if (BASE[y][x] !== ".") px.push([x, y, g.c]); if (g.id !== "gorro-lana") for (let x = 1; x < 8; x++) px.push([x, 3, g.c]); else px.push([7, 0, "#fff"], [8, 0, "#fff"]) }
   const gf = ROPA.find(r => r.id === o.gafas);
   if (gf) { [[3, 5], [4, 5], [5, 5], [6, 5], [7, 5], [8, 5], [9, 5], [10, 5], [11, 5], [12, 5]].forEach(p => px.push([...p, gf.c])); if (gf.fill) [[3, 6], [4, 6], [5, 6], [6, 6], [9, 6], [10, 6], [11, 6], [12, 6]].forEach(p => px.push([...p, gf.c])); else [[3, 6], [6, 6], [9, 6], [12, 6]].forEach(p => px.push([...p, gf.c])) }
   const z = ROPA.find(r => r.id === o.zapas);
@@ -107,7 +120,27 @@ const DRAW = {
   sofa: x => { box(x, 3.4, 4.8, 2.3, 1, 5, "#5e5ce6"); box(x, 3.4, 5.55, 2.3, .3, 10, "#4b49c9") },
   cuadro: x => { const a = P(1, 0, 34), b = P(2.2, 0, 34), c = P(2.2, 0, 22), d = P(1, 0, 22); poly(x, [a, b, c, d], "#ffffff"); poly(x, [P(1.1, 0, 32.5), P(2.1, 0, 32.5), P(2.1, 0, 23.5), P(1.1, 0, 23.5)], "#ff9f0a") },
   hucha: x => box(x, 4.7, .5, .55, .4, 4, "#ff7eb6"),
+  neon: x => { const t = Date.now() / 400; x.save(); x.shadowColor = "#ff2d55"; x.shadowBlur = 6 + Math.sin(t) * 2; poly(x, [P(3.1, 0, 38), P(5.4, 0, 38), P(5.4, 0, 31), P(3.1, 0, 31)], "#ff2d55"); x.restore(); poly(x, [P(3.3, 0, 36.5), P(5.2, 0, 36.5), P(5.2, 0, 32.5), P(3.3, 0, 32.5)], "#ffd1dc") },
+  colgantes: x => { [[0, 1.2], [0, 4.6]].forEach(([gx, gy]) => { box(x, gx, gy, .5, .5, 3, "#d2691e", 36); box(x, gx, gy, .6, .6, 8, "#30d158", 28) }) },
+  arcade: x => { box(x, 5.2, 2.5, .8, .8, 16, "#5e5ce6"); box(x, 5.15, 2.6, .05, .6, 6, "#64d2ff", 8); box(x, 5.1, 2.6, .1, .6, 2, "#ff2d55", 5) },
+  acuario: x => { box(x, 2.2, 5.2, 1.2, .6, 4, "#3a3a3c"); x.globalAlpha = .75; box(x, 2.2, 5.2, 1.2, .6, 6, "#64d2ff", 4); x.globalAlpha = 1; const t = Math.floor(Date.now() / 500) % 2; x.fillStyle = "#ff9f0a"; const [fx, fy] = P(2.6 + t * .3, 5.8, 7); x.fillRect(fx, fy, 2, 1) },
+  trofeo: x => { box(x, 1.4, .3, .6, .6, 6, "#e5e5ea"); box(x, 1.5, .4, .4, .4, 6, "#ffd60a", 6); box(x, 1.45, .35, .5, .5, 2, "#ffb800", 12) },
 };
+/* Bongo: perrito negro con mancha blanca y collar naranja */
+const BONGO = ["K..K..........", "KKKK..........", "KWKKK........T", "KKKKK.......T.", "KKKKKKKKKKKKK.", ".OOKKKKKKKKKK.", ".KWWKKKKKKKKK.", ".KWKKKKKKKKKK.", ".KK.KK...KK.KK", ".KK.KK...KK.KK"];
+const bongoUnlocked = () => milestones() >= 2;
+function drawBongo(x, sx, sy) {
+  const sad = mood === "enfermo" || mood === "agotado" || mood === "triste", wag = !sad && Math.floor(Date.now() / 250) % 2;
+  const col = { K: "#1a1a1a", W: "#ffffff", O: "#ff9f0a", T: "#1a1a1a" };
+  BONGO.forEach((r, y) => [...r].forEach((k, i) => {
+    if (k === ".") return; let yy = y;
+    if (k === "T") { if (sad) return; yy = wag ? y : y + 1 }
+    if (sad && y < 2) yy = y + 2;
+    if (sad && y >= 8) return;
+    x.fillStyle = col[k]; x.fillRect(sx + i, sy + yy + (sad ? 2 : 0), 1, 1);
+  }));
+  if (sad) { x.fillStyle = "#1a1a1a"; x.fillRect(sx + 13, sy + 6, 1, 3) }
+}
 function drawRoom() {
   const cv = $("room"); if (!cv) return; const x = cv.getContext("2d");
   x.clearRect(0, 0, 200, 150);
@@ -122,8 +155,10 @@ function drawRoom() {
   x.strokeStyle = "rgba(120,80,40,.12)"; x.lineWidth = .5;
   for (let i = 1; i < 6; i++) { x.beginPath(); x.moveTo(...P(i, 0)); x.lineTo(...P(i, 6)); x.stroke(); x.beginPath(); x.moveTo(...P(0, i)); x.lineTo(...P(6, i)); x.stroke() }
   // muebles por profundidad y el personaje en medio
-  const order = ["alfombra", "esterilla", "cuadro", "estanteria", "escritorio", "setup", "planta", "hucha", "saco", "silla", "cama", "lampara", "@yo", "mancuernas", "sofa"];
+  const order = ["alfombra", "esterilla", "neon", "cuadro", "colgantes", "estanteria", "trofeo", "escritorio", "setup", "planta", "hucha", "saco", "arcade", "silla", "cama", "lampara", "@yo", "@bongo", "mancuernas", "acuario", "sofa"];
   order.forEach(id => {
+    if (id === "@bongo") { if (bongoUnlocked()) { const [bx, by] = P(4.3, 3.7); drawBongo(x, bx - 7, by - 10) } return }
+    if (id === "@yo" && outfit.aura) { const [ax, ay] = P(3.3, 3.3); const gr = x.createRadialGradient(ax, ay - 9, 2, ax, ay - 9, 16); gr.addColorStop(0, "rgba(255,214,10,.55)"); gr.addColorStop(1, "rgba(255,214,10,0)"); x.fillStyle = gr; x.fillRect(ax - 18, ay - 27, 36, 36) }
     if (id === "@yo") { const [sx, sy] = P(3.3, 3.3); spritePixels(outfit, mood, blink).forEach(([px, py, c]) => { x.fillStyle = c; x.fillRect(sx - 8 + px, sy - 17 + py + bob, 1, 1) }); return }
     if (owned(id) && DRAW[id]) DRAW[id](x);
   });
@@ -136,14 +171,14 @@ function renderCasa() {
   const c = coins(), lv = level(), sickNow = mood === "enfermo";
   $("coinsHoy").innerHTML = money(c);
   if (tab === "casa") {
-    $("roomNote").textContent = sickNow ? "Estás enfermo: la tienda está cerrada hasta que llegues hoy al 60 %." : `${MUEBLES.filter(m => owned(m.id)).length} de ${MUEBLES.length} muebles · nivel ${lv}`;
+    $("roomNote").textContent = sickNow ? "Estás enfermo: la tienda está cerrada hasta que llegues hoy al 60 %." : `${MUEBLES.filter(m => !m.rarity && owned(m.id)).length} de ${MUEBLES.filter(m => !m.rarity).length} muebles · nivel ${lv}`;
     const list = casaTab === "muebles" ? MUEBLES : ROPA, g = $("shop"); g.innerHTML = "";
-    list.forEach(it => {
+    list.filter(it => !it.rarity || owned(it.id)).forEach(it => {
       const have = casaTab === "muebles" ? owned(it.id) : owned(it.id), worn = casaTab === "ropa" && outfit[it.slot] === it.id;
       const lockLv = it.lv && lv < it.lv, lockNeed = it.needs && !owned(it.needs);
-      const d = document.createElement("button"); d.className = "item" + (have ? " have" : ""); d.style.setProperty("--c", it.area ? `var(--${it.area})` : it.c);
+      const d = document.createElement("button"); d.className = "item" + (have ? " have" : ""); d.style.setProperty("--c", it.area ? `var(--${it.area})` : it.c); if (it.rarity) { d.classList.add("rare"); d.style.setProperty("--rc", RAREZA[it.rarity].c) }
       const sub = have ? (casaTab === "ropa" ? (worn ? "Puesto" : "Ponértelo") : "En tu casa") : lockLv ? `Nivel ${it.lv}` : lockNeed ? "Necesita escritorio" : "";
-      d.innerHTML = `<i class="swatch"></i><b></b><small>${sub || money(it.cost)}</small>`; d.querySelector("b").textContent = it.name;
+      d.innerHTML = `<i class="swatch"></i><b></b><small>${sub || money(it.cost)}</small>${it.rarity ? `<em>${RAREZA[it.rarity].name}</em>` : ""}`; d.querySelector("b").textContent = it.name;
       d.disabled = !have && (lockLv || lockNeed || sickNow || c < it.cost);
       d.onclick = () => have ? (casaTab === "ropa" && wear(it)) : buy(it, "item");
       g.append(d);
@@ -158,8 +193,58 @@ function renderCasa() {
     });
     $("premioNote").textContent = sickNow ? "Estás enfermo: primero cúrate llegando hoy al 60 %." : a ? "Ya tienes un premio en marcha." : "Cada día perfecto da unos 140 de monedas: una hora de ocio bien ganada.";
   }
+  renderCofres();
   renderTimer();
 }
+
+/* ---------- Cofres de racha ---------- */
+function milestones() {
+  let n = 0;
+  for (const k of Object.keys(days).sort()) { if (k < START || frac(k) < .6) continue; if ((prevStreak(k) + 1) % 7 === 0) n++ }
+  return n;
+}
+const opened = () => purchases.filter(p => p.kind === "cofre").length;
+const chestsLeft = () => Math.max(0, milestones() - new Set(purchases.filter(p => p.kind === "cofre").map(p => p.minutes)).size);
+function renderCofres() {
+  const n = chestsLeft(), st = streak(), next = 7 - (st % 7 || (frac(dayKey(0)) >= .6 ? 7 : 0)) || 7;
+  const chip = $("chestChip"); chip.hidden = !n; chip.textContent = "🎁 " + n;
+  if (tab !== "casa") return;
+  $("chestTitle").textContent = n ? (n === 1 ? "Tienes un cofre" : `Tienes ${n} cofres`) : "Cofre de racha";
+  $("chestSub").textContent = n ? "Dentro hay un objeto raro que no se puede comprar." : `El próximo, al llegar a ${Math.ceil((st + 1) / 7) * 7} días de racha (vas por ${st}).`;
+  $("chestBtn").hidden = !n;
+  const b = $("bongoNote"); b.hidden = bongoUnlocked();
+  b.textContent = `Bongo llega a tu casa con 14 días de racha (cofres conseguidos: ${milestones()} de 2).`;
+}
+function roll() {
+  const r = Math.random(), rar = r < .07 ? "legendario" : r < .35 ? "epico" : "raro";
+  const pool = [...ROPA, ...MUEBLES].filter(it => it.rarity === rar && !owned(it.id));
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+}
+function openChest() {
+  if (!chestsLeft()) return;
+  const used = new Set(purchases.filter(p => p.kind === "cofre").map(p => p.minutes));
+  let m = 1; while (used.has(m)) m++;
+  const it = roll(), row = it ? { user_id: uid, item: it.id, kind: "cofre", cost: 0, minutes: m, at: new Date().toISOString() } : { user_id: uid, item: "monedas", kind: "cofre", cost: -150, minutes: m, at: new Date().toISOString() };
+  const modal = $("chestModal"), box = $("chestBox"), res = $("chestResult");
+  modal.hidden = false; res.hidden = true; box.className = "chest shake"; $("chestOpen").hidden = false;
+  $("chestOpen").onclick = () => {
+    $("chestOpen").hidden = true; box.className = "chest pop";
+    setTimeout(() => {
+      purchases = [...purchases, row]; box.className = "chest gone";
+      const rz = it ? RAREZA[it.rarity] : { name: "Bolsa de monedas", c: "#ffb800" };
+      res.style.setProperty("--rc", rz.c); res.hidden = false;
+      $("chestRarity").textContent = rz.name; $("chestItem").textContent = it ? it.name : "+150 monedas";
+      $("chestHint").textContent = it ? (it.slot ? "Ya lo llevas puesto. Puedes quitártelo en Casa → Ropa." : "Ya está en tu habitación.") : "Ya tenías todos los objetos de esta rareza.";
+      if (it && it.slot) outfit = { ...outfit, [it.slot]: it.id };
+      burst(res); renderCasa(); drawPet();
+      write(() => sb.from("purchases").insert(row));
+      if (it && it.slot) write(() => sb.from("profile").upsert({ user_id: uid, outfit, updated_at: new Date().toISOString() }, { onConflict: "user_id" }));
+    }, 650);
+  };
+}
+$("chestBtn").onclick = openChest;
+$("chestClose").onclick = () => { $("chestModal").hidden = true };
+$("chestChip").onclick = () => setTab("casa");
 function renderTimer() {
   const a = activePremio(), el = $("timer");
   if (!a) { el.hidden = true; return }
@@ -202,5 +287,5 @@ document.querySelectorAll("[data-shop]").forEach(b => b.onclick = () => { casaTa
 window.onRendered = renderCasa;
 window.loadCasa = loadCasa;
 
-if (uid === "demo") { purchases = ["alfombra","cama","escritorio","setup","planta","estanteria","gorra-negra","cadena-oro"].map(item => ({ item, kind: "item", cost: 0, at: "2026-10-17T10:00:00Z" })); outfit = { gorra: "gorra-negra", cadena: "cadena-oro" } }
+if (uid === "demo") { milestones = () => 2; purchases = ["alfombra","cama","escritorio","setup","planta","estanteria","gorra-negra","cadena-oro"].map(item => ({ item, kind: "item", cost: 0, at: "2026-10-17T10:00:00Z" })); outfit = { gorra: "gorra-negra", cadena: "cadena-oro" } }
 renderCasa(); drawPet();

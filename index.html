@@ -143,6 +143,29 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 .timer .ico{background:rgba(255,255,255,.2)}
 .timer small{color:rgba(255,255,255,.8)}
 .clock{font-family:var(--rounded);font-size:28px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+
+.gift{border:0;background:linear-gradient(135deg,#ffd60a,#ff9f0a);color:#3a2400;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.08)}}
+.chestcard{background:var(--surface);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px}
+.chestcard .btn{min-height:40px;padding:0 18px;font-size:15px}
+.mini-chest{width:42px;height:34px;border-radius:7px 7px 5px 5px;flex:none;background:linear-gradient(180deg,#c47a2c 0 42%,#ffd60a 42% 52%,#a8621f 52%);box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+.item{position:relative}
+.item em{position:absolute;top:12px;right:12px;font-style:normal;font-size:11px;font-weight:700;color:#fff;background:var(--rc);padding:3px 7px;border-radius:99px}
+.item.rare{box-shadow:inset 0 0 0 2px var(--rc)}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);display:grid;place-items:center;padding:24px}
+.modal-in{width:min(340px,100%);background:var(--surface);border-radius:28px;padding:28px 22px;display:grid;justify-items:center;gap:18px;text-align:center}
+.chest{position:relative;width:120px;height:96px;border-radius:16px 16px 10px 10px;background:linear-gradient(180deg,#c47a2c 0 40%,#ffd60a 40% 50%,#a8621f 50%);box-shadow:inset 0 0 0 4px rgba(0,0,0,.22),0 12px 30px rgba(255,159,10,.35)}
+.chest i{position:absolute;left:50%;top:36%;width:20px;height:24px;margin-left:-10px;border-radius:5px;background:#ffd60a;box-shadow:inset 0 0 0 3px #b8860b}
+.chest.shake{animation:shake 1.2s ease-in-out infinite}
+@keyframes shake{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(-6deg)}80%{transform:rotate(6deg)}90%{transform:rotate(-3deg)}}
+.chest.gone{display:none}
+.chest.pop{animation:pop .65s var(--spring) forwards}
+@keyframes pop{40%{transform:scale(1.25)}100%{transform:scale(0);opacity:0}}
+.result{display:grid;gap:8px;justify-items:center;width:100%}
+.result span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:var(--rc);padding:5px 12px;border-radius:99px;box-shadow:0 0 24px var(--rc)}
+.result b{font-family:var(--rounded);font-size:28px;font-weight:800;letter-spacing:-.03em}
+.result small{color:var(--muted);font-size:14px}
+.result .btn{width:100%;margin-top:8px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:370px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.areas{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -151,7 +174,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 <main class="wrap">
   <header>
     <div class="logo"><small id="today">Hoy</small><b>Levo</b></div>
-    <div class="chips"><span class="chip" id="coinsHoy"></span><span class="chip" id="lvl">NV 1</span><span class="chip hot" id="streak">0 días</span></div>
+    <div class="chips"><button class="chip gift" id="chestChip" hidden></button><span class="chip" id="coinsHoy"></span><span class="chip" id="lvl">NV 1</span><span class="chip hot" id="streak">0 días</span></div>
   </header>
 
   <section class="card enter" id="install" hidden>
@@ -217,6 +240,12 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
       <canvas id="room" width="200" height="150" aria-label="Tu habitación"></canvas>
       <p class="roomnote" id="roomNote"></p>
     </section>
+    <section class="chestcard enter">
+      <div class="mini-chest" aria-hidden="true"></div>
+      <div class="pt"><b id="chestTitle">Cofre de racha</b><small id="chestSub"></small></div>
+      <button class="btn accent" id="chestBtn" hidden>Abrir</button>
+    </section>
+    <p class="status" id="bongoNote" hidden></p>
     <div class="seg" role="tablist">
       <button role="tab" data-shop="muebles" aria-selected="true">Muebles</button>
       <button role="tab" data-shop="ropa" aria-selected="false">Ropa</button>
@@ -235,6 +264,19 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 
   <p class="status" id="status"></p>
 </main>
+
+<div class="modal" id="chestModal" hidden role="dialog" aria-label="Abrir cofre">
+  <div class="modal-in">
+    <div class="chest shake" id="chestBox"><i></i></div>
+    <button class="btn accent" id="chestOpen">Abrir cofre</button>
+    <div class="result" id="chestResult" hidden>
+      <span id="chestRarity"></span>
+      <b id="chestItem"></b>
+      <small id="chestHint"></small>
+      <button class="btn" id="chestClose">Genial</button>
+    </div>
+  </div>
+</div>
 
 <nav class="tabbar" aria-label="Secciones">
   <button id="tb-hoy" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.6 2.5L16 9.5"/></svg>Hoy</button>
