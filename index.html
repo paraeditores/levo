@@ -233,6 +233,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
   <div id="roomSlotHoy"><section class="habroom" id="roomWrap">
     <canvas id="room" width="240" height="190" aria-label="Tu habitación"></canvas>
     <div class="bubble" id="bubble"><i></i><span></span></div>
+    <button class="dchip" id="dailyChip" hidden></button>
   </section></div>
   <section class="rescue" id="rescue" hidden aria-live="polite"></section>
   <section class="hero enter" aria-label="Tu progreso de hoy">
@@ -251,6 +252,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     </div>
   </section>
 
+  <section class="reto" id="reto" hidden aria-live="polite"></section>
   <section class="goals" id="goals" aria-label="Tus próximos premios"></section>
   <section class="areas" id="areas" aria-label="Áreas"></section>
 
@@ -513,5 +515,6 @@ render();
 </script>
 <script src="casa.js"></script>
 <script src="onboarding.js"></script>
+<script src="daily.js"></script>
 </body>
 </html>

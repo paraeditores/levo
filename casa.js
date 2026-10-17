@@ -287,6 +287,7 @@ function drawRoom(cv) {
   list.push({ d: me.x + me.y, draw: () => { const [ax, ay] = P(me.x, me.y); drawAvatar(x, ax, ay, outfit, mood, blink, fr, me.wave > 0) } });
   if (bongoUnlocked()) list.push({ d: 8.0, draw: () => { const [bx, by] = P(4.4, 3.6); drawBongo(x, bx - 14, by - 20) } });
   list.sort((a, b) => a.d - b.d).forEach(o => o.draw());
+  if (window.roomExtras) roomExtras(x);
   if (mood === "enfermo") { x.fillStyle = "rgba(10,10,25,.45)"; x.fillRect(0, 0, RW, RH); x.fillStyle = "rgba(220,220,220,.5)"; for (let i = 0; i < 60; i++) x.fillRect((i * 53) % RW, (i * 37) % RH, 1, 1) }
 }
 /* Bocadillo de texto encima del personaje */
@@ -402,6 +403,7 @@ function renderCasa() {
   }
   renderCofres(); renderTimer(); renderRescue(); checkLevelUp();
   if (window.onboardingRender) onboardingRender();
+  if (window.dailyRender) dailyRender();
 }
 
 /* ---------- Subida de nivel ---------- */
