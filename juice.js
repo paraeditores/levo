@@ -145,7 +145,7 @@ function celebrate(force) {
     if (!still && t - last > 520) { boom(); last = t }
     fx.fillStyle = "rgba(10,10,18,.22)"; fx.fillRect(0, 0, fw.width, fw.height);
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx; p.y += p.vy; p.vy += .06; p.vx *= .985; p.life -= .009; if (p.life <= 0) { parts.splice(i, 1); continue } fx.globalAlpha = p.life; fx.fillStyle = p.c; fx.fillRect(p.x, p.y, 3, 3) } fx.globalAlpha = 1;
-    const ph = Math.floor(t / 260) % 4; ax.clearRect(0, 0, 64, 64); drawAvatar(ax, 32, 58 - (ph % 2 ? 6 : 0), outfit, "feliz", false, ph % 2 ? 1 : 2, ph < 2);
+    const ph = Math.floor(t / 260) % 4; ax.clearRect(0, 0, 64, 64); drawAvatar(ax, 32, 58 - (ph % 2 ? 6 : 0), { ...outfit, _evo: window._evoCache }, "feliz", false, ph % 2 ? 1 : 2, ph < 2);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame); boom();

@@ -7,7 +7,7 @@ const myName = () => (outfit._cfg && outfit._cfg.name) || "Jugador";
 function mySnap() {
   const own = [...MUEBLES, ...ESTILOS, ...AMPLIA].filter(i => owned(i.id)).map(i => i.id);
   if (bongoUnlocked()) own.push("@bongo");
-  const { _cfg, ...look } = outfit;
+  const { _cfg, ...look } = outfit; look._evo = window._evoCache || null;
   return { outfit: look, owned: own, lvl: level(), streak: streak(), pct: Math.round(frac(dayKey(0)) * 100), mood, layout: outfit._layout || null, day: dayKey(0) };
 }
 function publishSnap() {

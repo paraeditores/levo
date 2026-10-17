@@ -24,6 +24,10 @@ const ROPA = [
   { id: "corona", slot: "gorra", name: "Corona", rarity: "legendario", c: "#ffd60a" },
   { id: "aura", slot: "aura", name: "Aura dorada", rarity: "legendario", c: "#ffcc00" },
   { id: "gorra-dorada", slot: "gorra", name: "Gorra dorada", lvGift: 8, c: "#ffc300" },
+  { id: "gorro-bruja", slot: "gorra", name: "Gorro de bruja", cost: 110, c: "#3a2a5c", season: "halloween" },
+  { id: "capa-vampiro", slot: "top", name: "Capa de vampiro", cost: 150, c: "#1c1c22", season: "halloween" },
+  { id: "gorro-navidad", slot: "gorra", name: "Gorro de Papá Noel", cost: 90, c: "#e0312b", season: "navidad" },
+  { id: "jersey-navidad", slot: "top", name: "Jersey navideño", cost: 140, c: "#c81e1e", season: "navidad" },
 ];
 const MUEBLES = [
   { id: "alfombra", area: "vida", name: "Alfombra", cost: 90, lv: 1 },
@@ -51,6 +55,12 @@ const MUEBLES = [
   { id: "dj", name: "Mesa de DJ", lvGift: 10, c: "#1c1c1e" },
   { id: "trono", name: "Trono", lvGift: 15, c: "#ffd60a" },
   { id: "estatua", name: "Estatua de oro", lvGift: 20, c: "#ffc300" },
+  { id: "calabaza", name: "Calabaza iluminada", cost: 80, c: "#ff8a00", season: "halloween" },
+  { id: "caldero", name: "Caldero burbujeante", cost: 120, c: "#5cff8a", season: "halloween" },
+  { id: "telarana", name: "Telarañas", cost: 60, c: "#c9c9d6", season: "halloween" },
+  { id: "arbol-navidad", name: "Árbol de Navidad", cost: 150, c: "#1f9d55", season: "navidad" },
+  { id: "regalos", name: "Montón de regalos", cost: 80, c: "#e0312b", season: "navidad" },
+  { id: "guirnalda", name: "Guirnalda de luces", cost: 70, c: "#ffd60a", season: "navidad" },
 ];
 const ESTILOS = [
   { id: "pared-lavanda", slot: "pared", name: "Pared lavanda", cost: 0, c: "#c9c2e0", base: true },
@@ -134,6 +144,13 @@ const OUT = "#1b1b1f";
 const SKINS = ["#f6cfae", "#eab38c", "#c98b5f", "#9a6440", "#6b4329"];
 const HAIRS = ["#2a1c14", "#5b3a22", "#a8692e", "#e3b25b", "#c43c2c", "#1f2a52", "#e9e9ee"];
 const LOOK_DEF = { skin: 0, hs: "corto", hc: 0, beard: "no", glasses: "no" };
+const STAGES = [[1, "Novato", "141,141,153"], [3, "Aprendiz", "100,210,255"], [6, "Constante", "48,209,88"], [10, "Imparable", "255,159,10"], [15, "Maestro", "191,90,242"], [20, "Leyenda", "245,196,81"]];
+function stageOf(lv) { let i = 0; STAGES.forEach((s, k) => { if (lv >= s[0]) i = k }); return { i, name: STAGES[i][1], rgb: STAGES[i][2], c: `rgb(${STAGES[i][2]})`, next: STAGES[i + 1] || null } }
+function areaRate(area, n = 14) { let t = 0, k = 0; for (let o = -1; o >= -n; o--) { const d = dayKey(o); if (d < START) break; k++; t += frac(d, area) } return k >= 3 ? t / k : 0 }
+function myEvo() {
+  const sleep = habits.find(h => /dorm|sueñ/i.test(h.name)), y = dayKey(-1);
+  return { st: stageOf(level()).i, fit: areaRate("cuerpo") >= .6, calm: areaRate("mente") >= .6, tired: !!(sleep && y >= START && !doneFor(y)[sleep.id]) };
+}
 function rect(x, a, b, w, h, c) { x.fillStyle = c; x.fillRect(Math.round(a), Math.round(b), w, h) }
 function orect(x, a, b, w, h, c) { rect(x, a - 1, b - 1, w + 2, h + 2, OUT); rect(x, a, b, w, h, c) }
 /* fx, fy = posición de los pies. frame alterna las piernas al andar. */
@@ -143,22 +160,26 @@ function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wav
   const top = (ALL.find(r => r.id === o.top) || {}).c || (md === "enfermo" ? "#98989f" : "#ff2d55");
   const pant = (ALL.find(r => r.id === o.pant) || {}).c || "#2d3a5a";
   const shoe = (ALL.find(r => r.id === o.zapas) || {}).c || "#3a3a3c";
-  const L = Math.round(fx - 7), T = Math.round(fy - 36);
+  const L = Math.round(fx - 7), T = Math.round(fy - 36), ev = o._evo || null, fit = !!(ev && ev.fit);
+  const bx = fit ? 2 : 3, bw = fit ? 11 : 9, ab = fit ? 0 : 1, af = fit ? 13 : 12, aw = fit ? 3 : 2;
   // sombra
   x.fillStyle = "rgba(0,0,0,.28)"; x.beginPath(); x.ellipse(fx, fy, 8, 3, 0, 0, Math.PI * 2); x.fill();
-  if (o.aura) { const g = x.createRadialGradient(fx, fy - 18, 3, fx, fy - 18, 22); g.addColorStop(0, "rgba(255,214,10,.6)"); g.addColorStop(1, "rgba(255,214,10,0)"); x.fillStyle = g; x.fillRect(fx - 24, fy - 42, 48, 48) }
+  if (o.aura || (ev && ev.st >= 1)) { const col = o.aura ? "255,214,10" : STAGES[ev.st][2], al = o.aura ? .6 : .16 + ev.st * .07; const g = x.createRadialGradient(fx, fy - 18, 3, fx, fy - 18, 22); g.addColorStop(0, `rgba(${col},${al})`); g.addColorStop(1, `rgba(${col},0)`); x.fillStyle = g; x.fillRect(fx - 24, fy - 42, 48, 48) }
   // piernas y zapatos
   const lu = frame === 1 ? -1 : 0, ru = frame === 2 ? -1 : 0;
   orect(x, L + 4, T + 27 + lu, 3, 7, pant); orect(x, L + 8, T + 27 + ru, 3, 7, pant);
   orect(x, L + 3, T + 33 + lu, 4, 2, shoe); orect(x, L + 8, T + 33 + ru, 4, 2, shoe);
   // brazo de atrás, cuerpo y brazo de delante
-  orect(x, L + 1, T + 17, 2, 8, top); rect(x, L + 1, T + 24, 2, 2, skin);
-  orect(x, L + 3, T + 16, 9, 12, top); rect(x, L + 3, T + 25, 9, 3, shade(top.startsWith("#") ? top : "#888888", .82));
+  orect(x, L + ab, T + 17, aw, 8, top); rect(x, L + ab, fit ? T + 20 : T + 24, aw, fit ? 6 : 2, skin);
+  orect(x, L + bx, T + 16, bw, 12, top); rect(x, L + bx, T + 25, bw, 3, shade(top.startsWith("#") ? top : "#888888", .82));
+  if (o.top === "capa-vampiro") { rect(x, L + bx, T + 16, bw, 2, "#c81e1e"); rect(x, L + bx + 3, T + 18, 3, 1, "#c81e1e") }
+  if (o.top === "jersey-navidad") { [[1, 19], [4, 21], [7, 19], [2, 23], [6, 23]].forEach(([a, b]) => rect(x, L + bx + a, T + b, 1, 1, "#ffffff")); rect(x, L + bx, T + 25, bw, 1, "#2fb344") }
   if (o.cadena) { rect(x, L + 5, T + 17, 1, 2, "#ffd60a"); rect(x, L + 6, T + 19, 3, 1, "#ffd60a"); rect(x, L + 9, T + 17, 1, 2, "#ffd60a") }
-  if (wave) { orect(x, L + 12, T + 9, 2, 8, top); rect(x, L + 12, T + 7, 2, 2, skin) } else { orect(x, L + 12, T + 17, 2, 8, top); rect(x, L + 12, T + 24, 2, 2, skin) }
+  if (wave) { orect(x, L + af, T + 9, aw, 8, top); rect(x, L + af, T + 7, aw, fit ? 5 : 2, skin) } else { orect(x, L + af, T + 17, aw, 8, top); rect(x, L + af, fit ? T + 20 : T + 24, aw, fit ? 6 : 2, skin) }
   // cabeza grande (vista 3/4)
   orect(x, L + 1, T + 3, 13, 13, skin); rect(x, L + 1, T + 13, 13, 3, skinD); rect(x, L + 6, T + 15, 4, 1, skinD);
   rect(x, L + 0, T + 8, 1, 3, skin); rect(x, L - 1, T + 8, 1, 3, OUT); // oreja
+  if (ev && ev.tired) { rect(x, L + 7, T + 11, 2, 1, shade(skin, .74)); rect(x, L + 11, T + 11, 2, 1, shade(skin, .74)) }
   // pelo
   const g = ALL.find(r => r.id === o.gorra);
   if (!g || g.id === "corona") {
@@ -169,6 +190,8 @@ function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wav
     else if (lk.hs === "calvo") { rect(x, L + 4, T + 4, 4, 1, shade(skin, 1.12)) }
   }
   if (g && g.id === "corona") { [[2, -3], [6, -4], [10, -3]].forEach(([a, b]) => orect(x, L + a, T + b, 3, 4, g.c)); orect(x, L + 1, T - 1, 13, 3, g.c); rect(x, L + 6, T, 3, 1, "#ff2d55") }
+  else if (g && g.id === "gorro-bruja") { orect(x, L - 1, T + 3, 17, 2, g.c); orect(x, L + 2, T, 11, 4, g.c); rect(x, L + 2, T + 2, 11, 1, "#ff9f0a"); orect(x, L + 4, T - 4, 7, 4, g.c); orect(x, L + 6, T - 8, 4, 4, g.c); orect(x, L + 8, T - 11, 2, 3, g.c) }
+  else if (g && g.id === "gorro-navidad") { orect(x, L + 1, T, 13, 4, "#e0312b"); rect(x, L + 1, T + 3, 13, 2, "#ffffff"); orect(x, L + 11, T - 3, 4, 4, "#e0312b"); orect(x, L + 14, T - 1, 3, 3, "#ffffff") }
   else if (g) { orect(x, L + 1, T, 13, 5, g.c); rect(x, L + 1, T + 4, 13, 1, shade(g.c, .75)); if (g.id === "gorro-lana") { orect(x, L + 6, T - 3, 3, 2, "#ffffff") } else orect(x, L + 10, T + 4, 7, 2, g.c); if (g.id === "gorra-holo") rect(x, L + 3, T + 1, 6, 1, "#ffffff") }
   // barba
   if (lk.beard === "corta") { x.globalAlpha = .55; rect(x, L + 3, T + 13, 11, 3, hair); x.globalAlpha = 1 }
@@ -181,6 +204,8 @@ function drawAvatar(x, fx, fy, o = outfit, md = mood, bl = blink, frame = 0, wav
   const M = { feliz: [[8, 12, 4, 1], [7, 11, 1, 1], [12, 11, 1, 1]], ok: [[8, 12, 4, 1]], triste: [[8, 12, 4, 1], [7, 13, 1, 1], [12, 13, 1, 1]], agotado: [[9, 12, 2, 1]], enfermo: [[8, 12, 1, 1], [9, 13, 1, 1], [10, 12, 1, 1], [11, 13, 1, 1]] }[md] || [[8, 12, 4, 1]];
   M.forEach(([a, b, w, h]) => rect(x, L + a, T + b, w, h, "#8a3b2a"));
   if (md === "feliz") rect(x, L + 12, T + 11, 2, 1, "#ff9aa2");
+  if (ev && ev.st >= 3) { const n = ev.st + 1, t = Date.now() / 700; x.fillStyle = `rgb(${STAGES[ev.st][2]})`; for (let i = 0; i < n; i++) { const an = t + i * Math.PI * 2 / n; x.fillRect(Math.round(fx + Math.cos(an) * 13), Math.round(fy - 22 + Math.sin(an) * 5 - (i % 2) * 7), 1, 1) } }
+  if (ev && ev.calm && Math.floor(Date.now() / 900) % 4 === 0) { x.fillStyle = "#64d2ff"; x.fillRect(Math.round(fx + 9), Math.round(fy - 40), 1, 1); x.fillRect(Math.round(fx + 8), Math.round(fy - 41), 1, 1) }
 }
 /* Bongo: perrito negro con mancha blanca y collar naranja (escala 2) */
 const BONGO = ["K..K..........", "KKKK..........", "KWKKK........T", "KKKKK.......T.", "KKKKKKKKKKKKK.", ".OOKKKKKKKKKK.", ".KWWKKKKKKKKK.", ".KWKKKKKKKKKK.", ".KK.KK...KK.KK", ".KK.KK...KK.KK"];
@@ -244,10 +269,19 @@ FURN.nevera.draw = x => { box(x, .1, 2.6, .8, .8, 20, "#64d2ff"); box(x, .9, 2.6
 FURN.nevera.d = 3.2;
 FURN.trono.draw = x => { box(x, 4.4, 3.3, 1, 1, 6, "#ffd60a"); box(x, 4.4, 4.15, 1, .2, 18, "#ffc300", 6); box(x, 4.5, 3.4, .8, .8, 1.5, "#ff2d55", 6) };
 FURN.trono.d = 7.7;
+Object.assign(FURN, {
+  calabaza: { d: 1.5, draw: x => { x.save(); if (!window._iconMode) { x.shadowColor = "#ff8a00"; x.shadowBlur = 6 + Math.sin(Date.now() / 300) * 2 } box(x, 1.2, .3, .6, .6, 7, "#ff8a00"); x.restore(); box(x, 1.45, .55, .1, .1, 3, "#3a7d2c", 7); const [a, b] = P(1.8, .6, 4.5); x.fillStyle = "#ffe14d"; x.fillRect(a - 6, b - 3, 2, 2); x.fillRect(a - 2, b - 1, 2, 2); x.fillRect(a - 7, b + 1, 6, 1) } },
+  caldero: { d: 7.8, draw: x => { box(x, 4.0, 3.8, .7, .7, 6, "#2b2b33"); box(x, 4.05, 3.85, .6, .6, .6, "#5cff8a", 6); const t = Date.now() / 120; x.fillStyle = "rgba(92,255,138,.85)"; if (!window._iconMode) for (let i = 0; i < 3; i++) { const [a, b] = P(4.35, 4.15, 8 + ((t + i * 7) % 12)); x.fillRect(a + (i - 1) * 3, b, 2, 2) } } },
+  telarana: { w: 1, draw: x => { x.strokeStyle = "rgba(235,235,245,.65)"; x.lineWidth = .7; const o = P(0, 0, 54); [[1.6, 0, 54], [0, 1.6, 54], [1.1, 0, 38], [0, 1.1, 38], [.5, 0, 30], [0, .5, 30]].forEach(p => { x.beginPath(); x.moveTo(...o); x.lineTo(...P(...p)); x.stroke() }); [.5, 1].forEach(r => { x.beginPath(); x.moveTo(...P(1.6 * r, 0, 54)); x.lineTo(...P(1.1 * r, 0, 54 - 16 * r)); x.lineTo(...P(0, 1.1 * r, 54 - 16 * r)); x.lineTo(...P(0, 1.6 * r, 54)); x.stroke() }) } },
+  "arbol-navidad": { d: 10.2, draw: x => { box(x, 5.5, 5.3, .3, .3, 4, "#7a4a24"); box(x, 5.2, 5.0, .9, .9, 9, "#1f9d55", 4); box(x, 5.3, 5.1, .7, .7, 8, "#27b463", 13); box(x, 5.42, 5.22, .46, .46, 7, "#2fcf73", 21); box(x, 5.55, 5.35, .2, .2, 3, "#ffd60a", 28); const on = Math.floor(Date.now() / 500) % 2, cols = ["#ff375f", "#ffd60a", "#64d2ff"]; [[5.9, 5.5, 8], [5.6, 5.9, 11], [5.85, 5.4, 17], [5.55, 5.75, 20], [5.7, 5.5, 25]].forEach((p, i) => { const [a, b] = P(...p); x.fillStyle = cols[(i + on) % 3]; x.fillRect(a, b, 2, 2) }) } },
+  regalos: { d: 9.7, draw: x => { box(x, 4.4, 5.3, .45, .45, 5, "#e0312b"); box(x, 4.6, 5.3, .05, .45, 5.3, "#ffd60a"); box(x, 4.9, 5.35, .35, .35, 4, "#5e5ce6"); box(x, 5.05, 5.35, .05, .35, 4.3, "#ffffff") } },
+  guirnalda: { w: 1, draw: x => { const on = Math.floor(Date.now() / 450) % 2, cols = ["#ff375f", "#ffd60a", "#30d158", "#64d2ff"]; for (let i = 0; i < 14; i++) { const [a, b] = P(.3 + i * .4, 0, 47 + (i % 2 ? -1.5 : 1.5)); x.fillStyle = cols[(i + on) % 4]; x.fillRect(a - 1, b - 1, 3, 3) } } },
+});
 
 /* Posición original (x, y) y tamaño (ancho, fondo) de cada mueble movible */
 const ANCH = { alfombra: [1.6, 1.8, 2.8, 2.6], esterilla: [4.3, 2.4, 1, 2], estanteria: [0, .9, .6, 1.6], trofeo: [1.4, .3, .6, .6], escritorio: [2, 0, 2.6, 1.1], dj: [2.1, 1.2, 1.6, .7], planta: [5.15, .05, .9, .9], hucha: [4.7, .5, .55, .4], nevera: [.1, 2.6, .8, .8], saco: [5, 1, .55, .55], arcade: [5.1, 2.5, .9, .8], lava: [5.4, 3.4, .35, .35], silla: [3, 1.5, .8, .8], cama: [0, 3.2, 1.8, 2.8], lampara: [.1, 5.3, .55, .55], trono: [4.4, 3.3, 1, 1.05], mancuernas: [5.3, 4.3, .3, 1.3], acuario: [2.2, 5.2, 1.2, .6], sofa: [3.4, 4.8, 2.3, 1.05], estatua: [1.9, 4.9, .8, .8] };
 FURN.setup.follow = "escritorio";
+Object.assign(ANCH, { calabaza: [1.2, .3, .6, .6], caldero: [4.0, 3.8, .7, .7], "arbol-navidad": [5.2, 5.0, .9, .9], regalos: [4.4, 5.3, .85, .45] });
 const AMPLIA = [{ id: "ampliacion-8", n: 8, name: "Ampliar a 8×8", cost: 300, lv: 3 }, { id: "ampliacion-10", n: 10, name: "Ampliar a 10×10", cost: 700, lv: 8 }];
 const roomSize = () => owned("ampliacion-10") ? 10 : owned("ampliacion-8") ? 8 : 6;
 function setGeom(n) { N = n; RWc = 2 * n * TW + 48; RHc = n * 2 * TH + 94; OX = RWc / 2 }
@@ -302,7 +336,7 @@ function drawRoom(cv) {
   if (editing2 && selected2 && ANCH[selected2]) { const [px, py] = posOf(selected2), a = ANCH[selected2]; poly(x, [P(px, py), P(px + a[2], py), P(px + a[2], py + a[3]), P(px, py + a[3])], "rgba(255,214,10,.45)", "#ffd60a") }
   const list = items.filter(id => !FURN[id].w && !FURN[id].f).map(id => { const [ox, oy] = offOf(id); return { d: FURN[id].d + ox + oy, draw: () => withOff(id, () => FURN[id].draw(x)) } });
   const fr = (me.wait > 0) ? 0 : (Math.floor(me.step) % 2 ? 1 : 2);
-  list.push({ d: me.x + me.y, draw: () => { const [ax, ay] = P(me.x, me.y), jy = me.jump > 0 ? Math.round(Math.sin((1 - me.jump / .5) * Math.PI) * 9) : 0; drawAvatar(x, ax, ay - jy, outfit, mood, blink, jy ? 1 : fr, me.wave > 0 || jy > 0) } });
+  list.push({ d: me.x + me.y, draw: () => { const [ax, ay] = P(me.x, me.y), jy = me.jump > 0 ? Math.round(Math.sin((1 - me.jump / .5) * Math.PI) * 9) : 0; drawAvatar(x, ax, ay - jy, { ...outfit, _evo: window._ownSet ? outfit._evo : window._evoCache }, mood, blink, jy ? 1 : fr, me.wave > 0 || jy > 0) } });
   if (bongoUnlocked()) { const bpos = freeTiles().slice(-1)[0] || [4.4, 3.6]; const bp = window._ownSet ? [4.4, 3.6] : (window._bongoPos = window._bongoPos && Math.random() > .002 ? window._bongoPos : bpos); list.push({ d: bp[0] + bp[1], draw: () => { const [bx, by] = P(bp[0], bp[1]); drawBongo(x, bx - 14, by - 20) } }) }
   list.sort((a, b) => a.d - b.d).forEach(o => o.draw());
   if (window.roomExtras) roomExtras(x);
@@ -356,8 +390,13 @@ let lastT = performance.now();
 function loop(t) {
   const dt = Math.min(.1, (t - lastT) / 1000); lastT = t;
   walkTick(dt); if (me.wave > 0) me.wave -= dt; if (me.jump > 0) me.jump -= dt;
-  if (document.visibilityState === "visible") { drawRoom($("room")); placeBubble() }
+  if (document.visibilityState === "visible") { drawRoom($("room")); placeBubble(); drawHero() }
   requestAnimationFrame(loop);
+}
+function drawHero() {
+  const cv = $("heroAv"); if (!cv || cv.offsetParent === null) return; const x = cv.getContext("2d"); x.imageSmoothingEnabled = false; x.clearRect(0, 0, 60, 60);
+  const jy = me.jump > 0 ? Math.round(Math.sin((1 - me.jump / .5) * Math.PI) * 6) : 0, bobH = mood === "enfermo" || mood === "agotado" ? 0 : Math.round(Math.sin(Date.now() / 500));
+  drawAvatar(x, 30, 55 - jy - bobH, { ...outfit, _evo: window._evoCache }, mood, blink, jy ? 1 : 0, me.wave > 0 || jy > 0);
 }
 drawPet = function () { /* el personaje vive en la habitación */ };
 
@@ -365,14 +404,14 @@ drawPet = function () { /* el personaje vive en la habitación */ };
 const iconCache = {};
 function iconFor(it) {
   if (iconCache[it.id]) return iconCache[it.id];
-  const g0 = N; setGeom(6);
+  const g0 = N; setGeom(6); window._iconMode = true;
   const c = document.createElement("canvas"); c.width = RW; c.height = RH; const x = c.getContext("2d");
   if (it.slot === "pared" || it.slot === "suelo") drawShell(x, it.slot === "pared" ? it : ESTILOS[0], it.slot === "suelo" ? it : ESTILOS[5]);
   else if (it.slot) drawAvatar(x, 120, 120, { [it.slot]: it.id }, "feliz", false);
   else if (FURN[it.id]) FURN[it.id].draw(x);
   const d = x.getImageData(0, 0, RW, RH).data; let x0 = RW, y0 = RH, x1 = 0, y1 = 0;
-  for (let y = 0; y < RH; y++) for (let i = 0; i < RW; i++) if (d[(y * RW + i) * 4 + 3] > 10) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y }
-  setGeom(g0);
+  for (let y = 0; y < RH; y++) for (let i = 0; i < RW; i++) if (d[(y * RW + i) * 4 + 3] > 60) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y }
+  setGeom(g0); window._iconMode = false;
   if (x1 < x0) return "";
   const w = x1 - x0 + 1, h = y1 - y0 + 1, s = Math.max(1, Math.floor(56 / Math.max(w, h))), o = document.createElement("canvas");
   o.width = 64; o.height = 64; const ox = o.getContext("2d"); ox.imageSmoothingEnabled = false;
@@ -397,17 +436,34 @@ const INSIGNIAS = [
   { id: "cien", name: "Centurión", desc: "100 hábitos cumplidos", ico: "🏛️", c: "#ffd60a", v: totalDone, goal: 100 },
 ];
 
+/* ---------- Temporadas ---------- */
+const SEASONS = [
+  { id: "halloween", name: "Noche de Halloween", from: [10, 5], to: [11, 1], c: "#ff8a00", desc: "Calabazas, calderos y disfraces de edición limitada. No volverán." },
+  { id: "navidad", name: "Navidad pixel", from: [11, 30], to: [1, 6], c: "#e0312b", desc: "Árbol, regalos y jerséis de edición limitada." },
+];
+function seasonDates(s, ref) { const y = ref.getFullYear(); let a = new Date(y, s.from[0] - 1, s.from[1]), b = new Date(y, s.to[0] - 1, s.to[1], 23, 59, 59); if (b < a) { if (ref < a) a = new Date(y - 1, s.from[0] - 1, s.from[1]); else b = new Date(y + 1, s.to[0] - 1, s.to[1], 23, 59, 59) } return [a, b] }
+function activeSeason() { const now = new Date(); for (const s of SEASONS) { const [a, b] = seasonDates(s, now); if (now >= a && now <= b) return { ...s, left: Math.ceil((b - now) / 864e5) } } return null }
+function nextSeason() { const now = new Date(); let best = null; SEASONS.forEach(s => { let [a] = seasonDates(s, now); if (a < now) a = new Date(a.getFullYear() + 1, a.getMonth(), a.getDate()); if (!best || a < best.start) best = { ...s, start: a, inDays: Math.ceil((a - now) / 864e5) } }); return best }
+const inSeason = it => !it.season || owned(it.id) || (activeSeason() && activeSeason().id === it.season);
+function renderSeason(ss) {
+  const el = $("season"); if (!el) return; const nx = nextSeason(), s = ss || nx; el.hidden = false; el.style.setProperty("--sc", s.c);
+  el.innerHTML = ss ? `<small>Temporada · quedan ${ss.left} ${ss.left === 1 ? "día" : "días"}</small><b>${ss.name}</b><span>${ss.desc}</span>` : `<small>Próxima temporada · en ${nx.inDays} días</small><b>${nx.name}</b><span>${nx.desc}</span>`;
+}
+/* Miniaturas de la evolución */
+const _evoIc = {};
+function evoIcon(i) { const key = i + JSON.stringify(outfit._look || {}); if (_evoIc[key]) return _evoIc[key]; const cv = document.createElement("canvas"); cv.width = cv.height = 60; const x = cv.getContext("2d"); x.imageSmoothingEnabled = false; const sv = window._ownSet; window._ownSet = null; drawAvatar(x, 30, 55, { _look: outfit._look, _evo: { st: i } }, "feliz", false); window._ownSet = sv; return _evoIc[key] = cv.toDataURL() }
+
 /* ---------- Vistas ---------- */
 function money(n) { return `<span class="coin"></span>${n}` }
 function itemCard(it, opts) {
   const d = document.createElement("button"); d.className = "item" + (opts.have ? " have" : "");
   if (it.rarity) { d.classList.add("rare"); d.style.setProperty("--rc", RAREZA[it.rarity].c) }
-  d.innerHTML = `<img alt="" src="${iconFor(it)}"><b></b><small>${opts.sub}</small>${it.rarity ? `<em>${RAREZA[it.rarity].name}</em>` : it.lvGift ? `<em class="gift">Nivel ${it.lvGift}</em>` : ""}`;
+  d.innerHTML = `<img alt="" src="${iconFor(it)}"><b></b><small>${opts.sub}</small>${it.rarity ? `<em>${RAREZA[it.rarity].name}</em>` : it.season ? `<em class="seasonb">Temporada</em>` : it.lvGift ? `<em class="gift">Nivel ${it.lvGift}</em>` : ""}`;
   d.querySelector("b").textContent = it.name; d.disabled = !!opts.disabled; d.onclick = opts.onclick; return d;
 }
 function nextGoal() {
   const c = coins(), lv = level();
-  const buyable = [...MUEBLES, ...ROPA, ...ESTILOS].filter(it => it.cost && !it.rarity && !owned(it.id) && !(it.lv && lv < it.lv) && !(it.needs && !owned(it.needs))).sort((a, b) => a.cost - b.cost);
+  const buyable = [...MUEBLES, ...ROPA, ...ESTILOS].filter(it => it.cost && !it.rarity && inSeason(it) && !owned(it.id) && !(it.lv && lv < it.lv) && !(it.needs && !owned(it.needs))).sort((a, b) => a.cost - b.cost);
   const goal = buyable.find(it => it.cost > c) || buyable[0];
   const gift = RUTA.find(it => it.lvGift > lv);
   return { goal, gift, c, lv };
@@ -425,12 +481,15 @@ function renderGoals() {
 }
 function renderCasa() {
   const c = coins(), lv = level(), sickNow = mood === "enfermo";
+  window._evoCache = myEvo();
   $("coinsHoy").innerHTML = money(c);
   renderGoals();
   if (tab === "casa") {
-    $("roomNote").textContent = sickNow ? "Estás enfermo: la tienda está cerrada hasta que llegues hoy al 60 %." : `${MUEBLES.filter(m => !m.rarity && !m.lvGift && owned(m.id)).length} de ${MUEBLES.filter(m => !m.rarity && !m.lvGift).length} muebles · nivel ${lv}`;
+    $("roomNote").textContent = sickNow ? "Estás enfermo: la tienda está cerrada hasta que llegues hoy al 60 %." : `${MUEBLES.filter(m => !m.rarity && !m.lvGift && !m.season && owned(m.id)).length} de ${MUEBLES.filter(m => !m.rarity && !m.lvGift && !m.season).length} muebles · nivel ${lv}`;
     renderAmplia(c, lv, sickNow);
-    const list = casaTab === "muebles" ? MUEBLES : casaTab === "ropa" ? ROPA : ESTILOS, g = $("shop"); g.innerHTML = "";
+    const ss = activeSeason(); renderSeason(ss);
+    const list = casaTab === "temporada" ? [...MUEBLES, ...ROPA].filter(i => i.season && inSeason(i)) : (casaTab === "muebles" ? MUEBLES : casaTab === "ropa" ? ROPA : ESTILOS).filter(i => !i.season || owned(i.id)), g = $("shop"); g.innerHTML = "";
+    if (casaTab === "temporada" && !list.length) g.innerHTML = `<p class="status" style="grid-column:1/-1">Ahora no hay temporada activa. Vuelve cuando empiece la próxima.</p>`;
     list.filter(it => !it.rarity || owned(it.id)).forEach(it => {
       const have = owned(it.id), wearable = !!it.slot, worn = wearable && (outfit[it.slot] === it.id || (it.base && !outfit[it.slot]));
       const lockLv = (it.lv && lv < it.lv) || (it.lvGift && lv < it.lvGift), lockNeed = it.needs && !owned(it.needs);
@@ -449,6 +508,7 @@ function renderCasa() {
       d.disabled = !!a || sickNow || c < p.cost; d.onclick = () => buy(p, "premio"); g.append(d);
     });
     $("premioNote").textContent = sickNow ? "Estás enfermo: primero cúrate llegando hoy al 60 %." : a ? "Ya tienes un premio en marcha." : "Cada día perfecto da unos 140 de monedas: una hora de ocio bien ganada.";
+    const evEl = $("evo"); if (evEl) { const cur = stageOf(lv).i; evEl.innerHTML = STAGES.map((s, i) => `<div class="stage${i === cur ? " cur" : i < cur ? " got" : ""}" style="--sc:rgb(${s[2]})"><img alt="" src="${evoIcon(i)}"><b>${s[1]}</b><small>Nivel ${s[0]}</small></div>`).join("") }
     const r = $("ruta"); r.innerHTML = "";
     RUTA.forEach(it => { const n = document.createElement("div"); const got = lv >= it.lvGift, cur = !got && RUTA.find(z => z.lvGift > lv) === it;
       n.className = "node" + (got ? " got" : "") + (cur ? " cur" : ""); n.innerHTML = `<span>Nv ${it.lvGift}</span><img alt="" src="${iconFor(it)}"><b></b>`; n.querySelector("b").textContent = it.name; r.append(n) });
@@ -579,6 +639,8 @@ function setTab(t) {
 }
 ["hoy", "casa", "premios", "amigos"].forEach(n => $("tb-" + n).onclick = () => setTab(n));
 document.querySelectorAll("[data-shop]").forEach(b => b.onclick = () => { casaTab = b.dataset.shop; document.querySelectorAll("[data-shop]").forEach(x => x.setAttribute("aria-selected", x === b)); renderCasa() });
+if (activeSeason()) { casaTab = "temporada" }
+document.querySelectorAll("[data-shop]").forEach(x => x.setAttribute("aria-selected", x.dataset.shop === casaTab));
 window.onRendered = renderCasa;
 window.loadCasa = loadCasa;
 

@@ -7,7 +7,7 @@ function renderProg() {
   $("progSub").textContent = n ? `${d} de ${n} hábitos` : "";
   $("progFill").style.width = p + "%";
   $("progFill").style.background = p >= 60 ? "linear-gradient(90deg,var(--vida),#0a84ff)" : "var(--grad)";
-  $("progLvl").textContent = `Nivel ${lv}`;
+  const st = stageOf(lv); $("progLvl").innerHTML = `Nivel ${lv} · <span style="color:${st.c}">${st.name}</span>`; const ha = $("heroAv"); if (ha) ha.style.setProperty("--stage", st.c);
   $("progNext").textContent = p < 60 && n ? `Llega al 60 % para salvar el día` : `${150 - X % 150} XP para el nivel ${lv + 1}`;
   // un solo premio a la vista
   const g = $("goals"); if (g) [...g.querySelectorAll(".goal")].slice(1).forEach(e => e.remove());
