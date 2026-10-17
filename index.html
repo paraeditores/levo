@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Levo</title>
+<meta name="description" content="La app de hábitos donde tu yo pixel sube de nivel cuando tú cumples.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
@@ -231,8 +232,6 @@ body:not([data-tab="hoy"]) .dchip{display:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:370px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.areas{grid-template-columns:repeat(2,1fr)}}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap">
 <link rel="stylesheet" href="levo.css">
 </head>
 <body>
@@ -406,7 +405,7 @@ function frac(k,area){const hs=habits.filter(h=>!area||h.area===area);if(!hs.len
 const stat=a=>Math.min(1,frac(dayKey(0),a)+.5*frac(dayKey(-1),a)+.25*frac(dayKey(-2),a));
 function streak(){let n=0,o=frac(dayKey(0))>=.6?0:-1;while(okDay(dayKey(o))&&n<999){n++;o--}return n}
 /* Modo duro: cada día cerrado por debajo del 60 % resta 50 XP; dos seguidos = enfermo */
-const START="2026-10-17";
+let START="2026-10-17"; /* se reemplaza por la fecha de alta de cada cuenta */
 let HARD=true; /* modo duro: lo decide el perfil (casa.js) */
 function okDay(k){return frac(k)>=.6} /* casa.js lo amplía con escudos y rescates */
 function failedDays(){let n=0;for(let o=-1;dayKey(o)>=START;o--)if(!okDay(dayKey(o)))n++;return n}
@@ -558,9 +557,9 @@ $("login").addEventListener("submit",async e=>{e.preventDefault();const email=$(
 
 if(location.hash==="#demo"){uid="demo";loaded=true;habits=[["a","Entrenar 30 min","cuerpo"],["b","8.000 pasos","cuerpo"],["c","Beber 2 litros de agua","cuerpo"],["d","Cerrar las 3 tareas clave","trabajo"],["e","Leer 20 minutos","mente"],["f","Hablar con familia","vida"]].map(([id,name,area])=>({id,name,area}));days={[dayKey(0)]:{done:{a:true,c:true,d:true}},[dayKey(-1)]:{done:{a:true,b:true,c:true,d:true}},[dayKey(-2)]:{done:{c:true}}};sb.from=()=>({upsert:async()=>({}),update:()=>({eq:async()=>({})}),insert:async()=>({})});load=async()=>render();render()}
 else sb.auth.onAuthStateChange((_e,session)=>{
-  uid=session?session.user.id:null;loaded=true;
+  uid=session?session.user.id:null;loaded=true;if(session&&session.user.created_at)START=fmt(new Date(session.user.created_at));
   $("login").hidden=!!uid;
-  if(uid){load();pushState()}else{habits=[];days={};render()}
+  if(uid){load();pushState()}else{habits=[];days={};try{localStorage.removeItem("levo-cache-v1")}catch(e){}render()}
 });
 $("install").hidden=!(isIOS&&!standalone);
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");

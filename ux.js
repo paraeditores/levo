@@ -16,3 +16,12 @@ const _drU = window.dailyRender; window.dailyRender = () => { if (_drU) _drU(); 
 const _otU = window.onTab; window.onTab = t => { document.body.dataset.tab = t; if (editing2 && t !== "casa") setEditing(false); if (_otU) _otU(t) };
 document.body.dataset.tab = "hoy";
 renderProg();
+
+/* Carga instantánea: se guarda lo último que viste y se pinta antes de que conteste el servidor */
+const CK = "levo-cache-v1"; let _ckT = 0;
+function saveCache() { if (!uid || uid === "demo" || !habits.length) return; clearTimeout(_ckT); _ckT = setTimeout(() => { try { localStorage.setItem(CK, JSON.stringify({ uid, START, habits, days, lastLog, purchases, outfit })) } catch (e) { } }, 800) }
+const _drC = window.dailyRender; window.dailyRender = () => { if (_drC) _drC(); saveCache() };
+(function boot() {
+  if (location.hash === "#demo" || location.hash === "#onb") return;
+  try { const c = JSON.parse(localStorage.getItem(CK) || "null"); if (c && !habits.length) { habits = c.habits || []; days = c.days || {}; lastLog = c.lastLog || null; purchases = c.purchases || []; outfit = c.outfit || {}; if (c.START) START = c.START; HARD = outfit._cfg ? !!outfit._cfg.hard : true; render() } } catch (e) { }
+})();

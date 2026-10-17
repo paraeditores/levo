@@ -122,7 +122,7 @@ function celebrate(force) {
   const st = streak(), d = new Date(), el = document.createElement("div"); el.className = "celeb"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Día completo");
   el.innerHTML = `<canvas class="fw"></canvas><div class="celeb-in">
     <div class="celeb-kicker">${d.toLocaleDateString("es-ES", { day: "numeric", month: "long" }).toUpperCase()} · ${habits.length} DE ${habits.length}</div>
-    <h1>DÍA<br>COMPLETO</h1>
+    <h1>Día completo</h1>
     <canvas class="celeb-av" width="64" height="64"></canvas>
     <div class="celeb-stats">
       <div><img alt="" src="${pixIcon("flame", 3)}"><b id="cStreak">${Math.max(0, st - 1)}</b><small>días de racha</small></div>
@@ -137,14 +137,14 @@ function celebrate(force) {
   const av = el.querySelector(".celeb-av"), ax = av.getContext("2d"); ax.imageSmoothingEnabled = false;
   // fuegos artificiales pixel
   const fw = el.querySelector("canvas.fw"), fx = fw.getContext("2d"), parts = []; let last = 0, alive = true;
-  const cols = ["#ff4d6d", "#ff9f1c", "#7b61ff", "#16c47f", "#ffc83d", "#3fa9ff", "#ffffff"];
+  const cols = ["#ffffff", "#f5c451", "#ff5c78", "#ffe8a3"];
   const fit = () => { fw.width = innerWidth; fw.height = innerHeight }; fit();
-  function boom() { const x = fw.width * (.15 + Math.random() * .7), y = fw.height * (.12 + Math.random() * .35), c = cols[Math.floor(Math.random() * cols.length)]; for (let i = 0; i < 38; i++) { const a = Math.PI * 2 * i / 38, v = 2 + Math.random() * 3.5; parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, c }) } }
+  function boom() { const x = fw.width * (.15 + Math.random() * .7), y = fw.height * (.12 + Math.random() * .35), c = cols[Math.floor(Math.random() * cols.length)]; for (let i = 0; i < 46; i++) { const a = Math.PI * 2 * i / 46, v = 1.5 + Math.random() * 3; parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, c }) } }
   function frame(t) {
     if (!alive) return;
     if (!still && t - last > 520) { boom(); last = t }
-    fx.fillStyle = "rgba(11,11,34,.2)"; fx.fillRect(0, 0, fw.width, fw.height);
-    for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx; p.y += p.vy; p.vy += .06; p.vx *= .985; p.life -= .009; if (p.life <= 0) { parts.splice(i, 1); continue } fx.globalAlpha = p.life; fx.fillStyle = p.c; fx.fillRect(Math.round(p.x / 6) * 6, Math.round(p.y / 6) * 6, 7, 7) } fx.globalAlpha = 1;
+    fx.fillStyle = "rgba(10,10,18,.22)"; fx.fillRect(0, 0, fw.width, fw.height);
+    for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx; p.y += p.vy; p.vy += .06; p.vx *= .985; p.life -= .009; if (p.life <= 0) { parts.splice(i, 1); continue } fx.globalAlpha = p.life; fx.fillStyle = p.c; fx.fillRect(p.x, p.y, 3, 3) } fx.globalAlpha = 1;
     const ph = Math.floor(t / 260) % 4; ax.clearRect(0, 0, 64, 64); drawAvatar(ax, 32, 58 - (ph % 2 ? 6 : 0), outfit, "feliz", false, ph % 2 ? 1 : 2, ph < 2);
     requestAnimationFrame(frame);
   }
@@ -157,24 +157,37 @@ window.levoCelebrate = celebrate;
 
 /* ---------- Tarjeta compartible del día completo ---------- */
 async function shareDay() {
-  try { await document.fonts.load('700 64px "Pixelify Sans"') } catch (e) { }
   const W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
-  x.fillStyle = "#12122e"; x.fillRect(0, 0, W, H);
-  x.fillStyle = "rgba(255,255,255,.04)"; for (let i = 0; i < W; i += 40) for (let j = 0; j < H; j += 40) if ((i + j) / 40 % 2 === 0) x.fillRect(i, j, 40, 40);
-  const PX = (w, s) => `${w} ${s}px "Pixelify Sans", monospace`;
-  x.textAlign = "center";
-  x.font = PX(700, 110); x.fillStyle = "#ff4d6d"; x.fillText("LEVO", W / 2 + 7, 207); x.fillStyle = "#ffffff"; x.fillText("LEVO", W / 2, 200);
-  x.font = PX(500, 40); x.fillStyle = "#ffc83d"; x.fillText(new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }).toUpperCase(), W / 2, 280);
-  const rc = document.createElement("canvas"); drawRoom(rc); const k = Math.min(940 / rc.width, 760 / rc.height), w2 = rc.width * k, h2 = rc.height * k;
-  x.imageSmoothingEnabled = false; x.drawImage(rc, (W - w2) / 2, 340, w2, h2);
-  x.font = PX(700, 170); x.fillStyle = "#000"; x.fillText("DÍA", W / 2 + 10, 1290); x.fillText("COMPLETO", W / 2 + 10, 1450); x.fillStyle = "#ff4d6d"; x.fillText("DÍA", W / 2 + 5, 1285); x.fillText("COMPLETO", W / 2 + 5, 1445); x.fillStyle = "#ffffff"; x.fillText("DÍA", W / 2, 1280); x.fillText("COMPLETO", W / 2, 1440);
-  const fl = new Image(); fl.src = pixIcon("flame", 10); await fl.decode().catch(() => { });
-  x.drawImage(fl, W / 2 - 230, 1520, 100, 100); x.textAlign = "left"; x.font = PX(700, 90); x.fillStyle = "#ffffff"; x.fillText(`${streak()} días`, W / 2 - 110, 1600);
-  x.textAlign = "center"; x.font = PX(500, 44); x.fillStyle = "#c9c7ee"; x.fillText(`${habits.length} de ${habits.length} hábitos cumplidos`, W / 2, 1720);
-  x.font = PX(500, 34); x.fillStyle = "rgba(255,255,255,.55)"; x.fillText("Mi yo pixel sube de nivel cuando yo cumplo", W / 2, 1840);
+  const F = (w, s) => `${w} ${s}px -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif`;
+  const g = x.createRadialGradient(540, 700, 80, 540, 900, 1300); g.addColorStop(0, "#1d2042"); g.addColorStop(1, "#0a0a12"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // marca y fecha
+  x.textBaseline = "alphabetic"; x.fillStyle = "#ffffff"; x.font = F(800, 64); x.fillText("levo", 90, 150);
+  x.fillStyle = "#ff5c78"; x.fillRect(90 + x.measureText("levo").width + 10, 128, 14, 14);
+  x.textAlign = "right"; x.fillStyle = "rgba(255,255,255,.55)"; x.font = F(600, 30);
+  x.fillText(new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }), W - 90, 148); x.textAlign = "left";
+  // la habitación, enmarcada como una pieza de galería
+  const fx = 90, fy = 230, fw = 900, fh = 760, r = 48;
+  x.save(); x.beginPath(); x.moveTo(fx + r, fy); x.arcTo(fx + fw, fy, fx + fw, fy + fh, r); x.arcTo(fx + fw, fy + fh, fx, fy + fh, r); x.arcTo(fx, fy + fh, fx, fy, r); x.arcTo(fx, fy, fx + fw, fy, r); x.closePath();
+  x.fillStyle = "#11152e"; x.fill(); x.strokeStyle = "rgba(255,255,255,.08)"; x.lineWidth = 2; x.stroke(); x.clip();
+  const rc = document.createElement("canvas"); drawRoom(rc); const k = Math.min((fw - 60) / rc.width, (fh - 60) / rc.height), w2 = rc.width * k, h2 = rc.height * k;
+  x.imageSmoothingEnabled = false; x.drawImage(rc, fx + (fw - w2) / 2, fy + (fh - h2) / 2, w2, h2); x.restore();
+  // titular
+  x.fillStyle = "#ffffff"; x.font = F(800, 150); x.fillText("Día", 82, 1200); x.fillText("completo.", 82, 1350);
+  x.fillStyle = "rgba(255,255,255,.62)"; x.font = F(500, 42); x.fillText(`${habits.length} de ${habits.length} hábitos cumplidos hoy`, 90, 1430);
+  // datos
+  const icons = await Promise.all(["flame", "coin", "star"].map(n => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = pixIcon(n, 6) })));
+  const st = streak(), data = [[icons[0], `${st}`, st === 1 ? "día seguido" : "días seguidos"], [icons[1], "+50", "monedas extra"], [icons[2], `${level()}`, "nivel"]];
+  data.forEach(([im, big, small], i) => {
+    const bx = 90 + i * 310, by = 1510;
+    x.fillStyle = "rgba(255,255,255,.06)"; x.beginPath(); x.roundRect ? x.roundRect(bx, by, 280, 200, 32) : x.rect(bx, by, 280, 200); x.fill();
+    if (im) { x.imageSmoothingEnabled = false; x.drawImage(im, bx + 32, by + 32, 48, 48) }
+    x.fillStyle = "#ffffff"; x.font = F(800, 64); x.fillText(big, bx + 32, by + 150);
+    x.fillStyle = "rgba(255,255,255,.55)"; x.font = F(600, 26); x.fillText(small, bx + 32, by + 184);
+  });
+  x.fillStyle = "rgba(255,255,255,.4)"; x.font = F(600, 28); x.fillText("Mi yo pixel sube de nivel cuando yo cumplo · Levo", 90, 1840);
   c.toBlob(async blob => {
     const file = new File([blob], "levo-dia-completo.png", { type: "image/png" });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: "Día completo en Levo 🔥" }); return } } catch (e) { if (e && e.name === "AbortError") return }
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: "Día completo en Levo" }); return } } catch (e) { if (e && e.name === "AbortError") return }
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "levo-dia-completo.png"; document.body.append(a); a.click(); a.remove();
   }, "image/png");
 }
@@ -183,3 +196,5 @@ async function shareDay() {
 const _drJ = window.dailyRender; window.dailyRender = () => { if (_drJ) _drJ(); decorate() };
 if ($("sndBtn")) $("sndBtn").onclick = toggleSound;
 render(); decorate();
+/* Capturas de demostración: ?shot=celebra | casa | premios (solo con #demo) */
+(() => { const shot = new URLSearchParams(location.search).get("shot"); if (!shot || location.hash !== "#demo") return; document.documentElement.classList.add("shot"); if (shot === "celebra") setTimeout(() => celebrate(true), 300); else setTab(shot) })();
