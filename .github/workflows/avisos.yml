@@ -1,4 +1,4 @@
-name: Avisos Mini Esteban
+name: Avisos Levo
 on:
   schedule:
     - cron: "7 * * * *"

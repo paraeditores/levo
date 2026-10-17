@@ -1,7 +1,7 @@
 // Manda el aviso de Mini Esteban que toca según la hora de Madrid. Lo lanza GitHub Actions cada hora.
 import webpush from "web-push";
 const { SUPABASE_URL: U, SUPABASE_SERVICE_KEY: K, VAPID_PUBLIC, VAPID_PRIVATE, FORZAR = "" } = process.env;
-webpush.setVapidDetails("https://paraeditores.github.io/mini-esteban/", VAPID_PUBLIC, VAPID_PRIVATE);
+webpush.setVapidDetails("https://paraeditores.github.io/levo/", VAPID_PUBLIC, VAPID_PRIVATE);
 const H = { apikey: K, Authorization: `Bearer ${K}`, "Content-Type": "application/json" };
 const api = async (path, opt = {}) => {
   const r = await fetch(`${U}/rest/v1/${path}`, { ...opt, headers: { ...H, ...(opt.headers || {}) } });
@@ -32,7 +32,7 @@ for (const uid of users) {
   const missing = habits.filter(h => !t[h.id]).map(h => h.name);
   const list = (n) => missing.slice(0, n).join(", ") + (missing.length > n ? ` y ${missing.length - n} más` : "");
   const yesterdayFailed = shift(-1) >= START && frac(shift(-1)) < .6;
-  let title = "Mini Esteban", body;
+  let title = "Levo", body;
   if (slot === "prueba") body = "Aviso de prueba: si lees esto, las notificaciones funcionan.";
   else if (slot === "manana") body = `Buenos días. Hoy toca: ${list(3)}. Empieza por lo más fácil.`;
   else if (!missing.length) body = slot === "cierre" ? "Día perfecto: 100 %. Me has dejado como nuevo." : "Lo tienes todo hecho. Sigue así.";
@@ -43,7 +43,7 @@ for (const uid of users) {
   } else {
     body = pct >= 60 ? `Día salvado: ${pct} %. Si quieres más XP aún te queda: ${list(3)}.`
       : `Vas por el ${pct} %. Si no llegas al 60 % antes de dormir pierdes 50 XP` + (yesterdayFailed ? " y mañana amanezco enfermo." : ".") + ` Te falta: ${list(3)}.`;
-    if (pct < 60) title = "Mini Esteban ⚠️";
+    if (pct < 60) title = "Levo ⚠️";
   }
   for (const s of subs.filter(s => s.user_id === uid)) {
     try { await webpush.sendNotification(s.sub, JSON.stringify({ title, body, tag: slot })); console.log("Enviado:", body); }

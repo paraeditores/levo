@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mini Esteban</title>
+<title>Levo</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Mini Esteban">
+<meta name="apple-mobile-web-app-title" content="Levo">
 <meta name="theme-color" content="#d9632b">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Figtree:wght@400;600;700&display=swap">
@@ -93,11 +93,11 @@ input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid 
 
   <section class="card" id="install" hidden>
     <h2>Instala la app</h2>
-    <p>En Safari toca Compartir y después «Añadir a pantalla de inicio». Abre Mini Esteban desde ese icono para recibir los avisos.</p>
+    <p>En Safari toca Compartir y después «Añadir a pantalla de inicio». Abre Levo desde ese icono para recibir los avisos.</p>
   </section>
 
   <form class="card" id="login" hidden>
-    <h2>Entra en tu Mini Esteban</h2>
+    <h2>Entra en Levo</h2>
     <input id="email" type="email" autocomplete="username" placeholder="Tu email" required>
     <input id="pass" type="password" autocomplete="current-password" placeholder="Contraseña" required>
     <button class="primary" type="submit">Entrar</button>
@@ -258,7 +258,7 @@ async function pushState(){
 $("pushBtn").onclick=async()=>{
   try{
     const perm=await Notification.requestPermission();
-    if(perm!=="granted")return status("Sin permiso no puedo avisarte. Actívalo en Ajustes → Notificaciones → Mini Esteban.");
+    if(perm!=="granted")return status("Sin permiso no puedo avisarte. Actívalo en Ajustes → Notificaciones → Levo.");
     const reg=await navigator.serviceWorker.ready;
     const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(window.MINI.VAPID_PUBLIC)});
     const j=sub.toJSON();
