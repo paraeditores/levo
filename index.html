@@ -109,6 +109,40 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 @keyframes burst{to{transform:translate(var(--x),var(--y)) scale(.4);opacity:0}}
 .enter{animation:enter .6s var(--spring) both}
 @keyframes enter{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+
+.tab{display:flex;flex-direction:column;gap:16px}
+.wrap{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
+.coin{display:inline-block;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe58a,#ffb800 60%,#e09200);box-shadow:inset 0 0 0 1.5px rgba(160,100,0,.35);margin-right:5px;vertical-align:-1px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;justify-content:center;gap:4px;padding:8px max(18px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 8px) max(18px,env(safe-area-inset-left,0px));background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--line)}
+.tabbar button{flex:1;max-width:140px;background:none;border:0;display:grid;justify-items:center;gap:2px;font-size:11px;font-weight:600;color:var(--muted);padding:4px 0}
+.tabbar svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button[aria-selected="true"]{color:var(--cuerpo)}
+.roomcard{background:linear-gradient(180deg,#cfe8ff,#f6e9ff);border-radius:var(--r);padding:10px 10px 12px;display:grid;gap:6px;overflow:hidden}
+.roomcard canvas{width:100%;aspect-ratio:4/3;image-rendering:pixelated;display:block}
+.roomnote{margin:0;text-align:center;font-size:13px;font-weight:600;color:#3a3550}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:10px;padding:2px}
+.seg button{border:0;background:transparent;border-radius:8px;padding:8px;font-size:14px;font-weight:600}
+.seg button[aria-selected="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.shop{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.item{background:var(--surface);border:0;border-radius:18px;padding:14px;display:grid;gap:6px;text-align:left;transition:transform .2s var(--spring)}
+.item:active{transform:scale(.97)}
+.item .swatch{width:34px;height:34px;border-radius:10px;background:var(--c);display:block;box-shadow:inset 0 -6px 0 rgba(0,0,0,.15)}
+.item b{font-size:15px;font-weight:600;line-height:1.2}
+.item small{font-size:13px;font-weight:600;color:var(--muted);font-family:var(--rounded)}
+.item.have small{color:var(--vida)}
+.item:disabled{opacity:.45;cursor:default}
+.premios{display:flex;flex-direction:column;background:var(--surface);border-radius:var(--r);overflow:hidden}
+.premio,.timer{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:0;padding:14px 16px}
+.premio+.premio{box-shadow:inset 0 .5px 0 var(--line)}
+.premio:disabled{opacity:.45;cursor:default}
+.ico{font-size:24px;width:42px;height:42px;border-radius:12px;background:var(--soft);display:grid;place-items:center;flex:none}
+.pt{flex:1;min-width:0;display:grid}
+.pt small{color:var(--muted);font-size:13px}
+.cost{font-family:var(--rounded);font-weight:700;font-size:15px;white-space:nowrap}
+.timer{background:linear-gradient(120deg,#5e5ce6,#0a84ff);color:#fff;border-radius:var(--r);box-shadow:0 8px 24px rgba(10,132,255,.3)}
+.timer .ico{background:rgba(255,255,255,.2)}
+.timer small{color:rgba(255,255,255,.8)}
+.clock{font-family:var(--rounded);font-size:28px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:370px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.areas{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -117,7 +151,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 <main class="wrap">
   <header>
     <div class="logo"><small id="today">Hoy</small><b>Levo</b></div>
-    <div class="chips"><span class="chip" id="lvl">NV 1</span><span class="chip hot" id="streak">0 días</span></div>
+    <div class="chips"><span class="chip" id="coinsHoy"></span><span class="chip" id="lvl">NV 1</span><span class="chip hot" id="streak">0 días</span></div>
   </header>
 
   <section class="card enter" id="install" hidden>
@@ -133,6 +167,9 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     <p id="loginMsg"></p>
   </form>
 
+  <section class="timer" id="timer" hidden aria-live="polite"></section>
+
+  <div class="tab" id="tab-hoy">
   <section class="hero enter" aria-label="Tu personaje">
     <div class="ring">
       <svg viewBox="0 0 150 150" id="rings" aria-hidden="true"></svg>
@@ -173,8 +210,37 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     </select>
     <button class="btn" type="submit">Añadir</button>
   </form>
+  </div>
+
+  <div class="tab" id="tab-casa" hidden>
+    <section class="roomcard enter">
+      <canvas id="room" width="200" height="150" aria-label="Tu habitación"></canvas>
+      <p class="roomnote" id="roomNote"></p>
+    </section>
+    <div class="seg" role="tablist">
+      <button role="tab" data-shop="muebles" aria-selected="true">Muebles</button>
+      <button role="tab" data-shop="ropa" aria-selected="false">Ropa</button>
+    </div>
+    <section class="shop" id="shop"></section>
+    <p class="status">Cada hábito da 5 monedas. Llegar al 60 % del día da +20 y el 100 %, +50. Con una racha de 7 días, el doble.</p>
+  </div>
+
+  <div class="tab" id="tab-premios" hidden>
+    <section class="card enter">
+      <h2>Tiempo libre</h2>
+      <p id="premioNote"></p>
+    </section>
+    <section class="premios" id="premios"></section>
+  </div>
+
   <p class="status" id="status"></p>
 </main>
+
+<nav class="tabbar" aria-label="Secciones">
+  <button id="tb-hoy" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.6 2.5L16 9.5"/></svg>Hoy</button>
+  <button id="tb-casa" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5V20H4z"/><path d="M10 20v-5h4v5"/></svg>Casa</button>
+  <button id="tb-premios" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M12 9v11M4 13h16M12 9c-2-4-6-3-5 0M12 9c2-4 6-3 5 0"/></svg>Premios</button>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -243,7 +309,7 @@ function render(){
   else if(mood==="enfermo")say="Estoy enfermo: dos días sin cumplir. Llega hoy al 60 % para curarme.";
   else if(lastLog&&Date.now()-Date.parse(lastLog.at)<20*3600e3)say=lastLog.text;
   else{const low=AREAS.map(([a])=>a).sort((a,b)=>s[a]-s[b])[0];say=s[low]>=.7?"Vamos fuertes. Sigue así.":LINES[low]}
-  $("say").textContent=say;drawPet();
+  $("say").textContent=say;drawPet();if(window.onRendered)onRendered();
   $("areas").innerHTML=AREAS.map(([a,l])=>`<div class="area" style="--c:var(--${a})"><span>${l}</span><strong>${Math.round(s[a]*100)}%</strong><div class="bar"><b style="width:${Math.round(s[a]*100)}%"></b></div></div>`).join("");
 
   const wk=$("week");wk.innerHTML="";
@@ -299,7 +365,7 @@ async function load(){
     sb.from("log").select("at,text").order("at",{ascending:false}).limit(1)]);
   if(h.error||d.error){status("No pude cargar tus datos. Recarga la app.");return}
   habits=h.data;const n={};d.data.forEach(r=>n[r.day]={done:r.done||{}});days=n;lastLog=l.data&&l.data[0]||null;
-  render();
+  render();if(window.loadCasa)loadCasa();
 }
 
 /* Avisos push */
@@ -339,5 +405,6 @@ if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()});
 render();
 </script>
+<script src="casa.js"></script>
 </body>
 </html>

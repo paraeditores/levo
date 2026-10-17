@@ -25,3 +25,10 @@ create policy own_habits on habits for all using (user_id=auth.uid()) with check
 create policy own_days on days for all using (user_id=auth.uid()) with check (user_id=auth.uid());
 create policy own_log on log for all using (user_id=auth.uid()) with check (user_id=auth.uid());
 create policy own_push on push_subs for all using (user_id=auth.uid()) with check (user_id=auth.uid());
+-- Fase casa y premios (2026-10-17)
+create table if not exists purchases(id bigserial primary key, user_id uuid not null default auth.uid() references auth.users on delete cascade, item text not null, kind text not null default 'item', cost int not null, minutes int, at timestamptz not null default now());
+create table if not exists profile(user_id uuid primary key default auth.uid() references auth.users on delete cascade, outfit jsonb not null default '{}', updated_at timestamptz default now());
+alter table purchases enable row level security;
+alter table profile enable row level security;
+create policy own_purchases on purchases for all using (user_id=auth.uid()) with check (user_id=auth.uid());
+create policy own_profile on profile for all using (user_id=auth.uid()) with check (user_id=auth.uid());
