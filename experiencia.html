@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Levo · El Camino</title>
+<meta name="theme-color" content="#060606">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{--red:#ff3b1f;--bone:#efe9df;--mute:#7d776d;--bg:#060606;--glow:255,59,31}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--bone);overflow:hidden;font-family:"JetBrains Mono",ui-monospace,monospace;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.scene{position:relative;height:100vh;height:100dvh;max-width:480px;margin:0 auto;overflow:hidden;isolation:isolate}
+.scene.won{--glow:240,214,168;--red:#f0d6a8}
+.grain{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:.07;mix-blend-mode:overlay;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.glow{position:absolute;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;z-index:0;pointer-events:none;background:radial-gradient(circle,rgba(var(--glow),.34),rgba(var(--glow),.08) 38%,transparent 66%);will-change:transform,opacity}
+.ring{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border:1.5px solid rgba(var(--glow),.9);border-radius:50%;z-index:1;pointer-events:none;opacity:0}
+#road{position:absolute;inset:0;z-index:1;width:100%;height:100%}
+#road .st{cursor:pointer}
+.hero{position:absolute;left:50%;z-index:2;transform-origin:50% 90%;pointer-events:none}
+.hero svg{display:block;width:100%;height:auto;filter:drop-shadow(0 18px 30px rgba(0,0,0,.6))}
+.heart{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--red);box-shadow:0 0 14px 4px rgba(var(--glow),.8),0 0 40px 10px rgba(var(--glow),.35);z-index:3;pointer-events:none}
+header{position:absolute;top:0;left:0;right:0;z-index:4;padding:calc(16px + env(safe-area-inset-top)) 22px 0;display:flex;justify-content:space-between;align-items:flex-start}
+.day{font:400 34px/1 Anton,Impact,sans-serif;letter-spacing:.01em;cursor:pointer}
+.sub{font:500 9.5px "JetBrains Mono";letter-spacing:.16em;color:var(--mute);margin-top:7px;text-transform:uppercase}
+.pulse{text-align:right}
+.bpm{font:400 34px/1 Anton,Impact,sans-serif;display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.bpm svg{width:17px;height:17px;fill:var(--red)}
+.card{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:44px 22px calc(22px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,rgba(6,6,6,0),rgba(6,6,6,.9) 26%,#060606 44%)}
+.meta{display:flex;justify-content:space-between;font:700 10px "JetBrains Mono";letter-spacing:.16em;color:var(--mute)}
+.meta b{color:var(--red);font-weight:700}
+h2{font:400 52px/.88 Anton,Impact,sans-serif;text-transform:uppercase;letter-spacing:.005em;margin:12px 0 10px}
+.d{font:italic 400 21px/1.1 "Instrument Serif",Georgia,serif;color:#dcd5c9;max-width:31ch;min-height:46px}
+.src{font:700 9.5px "JetBrains Mono";letter-spacing:.14em;color:var(--mute);margin-top:8px}
+.act{display:flex;align-items:center;gap:16px;margin-top:18px}
+#hold{width:80px;height:80px;flex:none;border-radius:50%;border:0;background:#151413;position:relative;display:grid;place-items:center;touch-action:none;cursor:pointer;outline:none}
+#hold svg.rg{position:absolute;inset:0;transform:rotate(-90deg)}
+#hold .hz{width:26px;height:26px;fill:var(--red);will-change:transform}
+.hl{font:700 11px/1.55 "JetBrains Mono";letter-spacing:.16em}
+.hl small{display:block;color:var(--mute);font-weight:500;letter-spacing:.12em}
+.stamp{position:absolute;left:50%;z-index:5;font:400 50px/.9 Anton,Impact,sans-serif;color:var(--red);text-align:center;white-space:nowrap;pointer-events:none;opacity:0;text-shadow:0 0 30px rgba(var(--glow),.5)}
+.flash{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 32%,rgba(var(--glow),.55),transparent 60%)}
+.chip{position:absolute;z-index:3;pointer-events:none;background:#ece6db;clip-path:polygon(0 30%,60% 0,100% 45%,70% 100%,15% 85%)}
+</style></head>
+<body>
+<div class="scene" id="scene">
+  <div class="glow" id="glow"></div>
+  <svg id="road" aria-label="El camino de hoy"></svg>
+  <div class="hero" id="hero"></div>
+  <div class="heart" id="heart"></div>
+  <header>
+    <div><div class="day" id="day" title="Reiniciar demo">DÍA 29</div><div class="sub" id="sub">DOM 18 OCT · EL ROSTRO</div></div>
+    <div class="pulse"><div class="bpm"><svg viewBox="0 0 24 24" id="hh"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.4 2.3 4 6.4 4c2.3 0 3.9 1.3 5.6 3.4C13.7 5.3 15.3 4 17.6 4 21.7 4 23.7 8.4 22 11.7 19.5 16.4 12 21 12 21z"/></svg><span id="bpm">90</span></div><div class="sub" id="cnt">PULSO · 1/8</div></div>
+  </header>
+  <div class="card" id="card">
+    <div class="meta"><span id="sn">PASO II / VIII</span><b id="sx"></b></div>
+    <h2 id="st"></h2>
+    <div class="d" id="sd"></div>
+    <div class="src" id="ss"></div>
+    <div class="act">
+      <button id="hold" aria-label="Mantén pulsado"><svg class="rg" viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" fill="none" stroke="#ffffff14" stroke-width="2"/><circle id="arc" cx="40" cy="40" r="37" fill="none" stroke="var(--red)" stroke-width="3" stroke-linecap="round" stroke-dasharray="232.5" stroke-dashoffset="232.5"/></svg><svg class="hz" id="hz" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.4 2.3 4 6.4 4c2.3 0 3.9 1.3 5.6 3.4C13.7 5.3 15.3 4 17.6 4 21.7 4 23.7 8.4 22 11.7 19.5 16.4 12 21 12 21z"/></svg></button>
+      <div class="hl" id="hl"></div>
+    </div>
+  </div>
+  <div class="flash" id="flash"></div>
+  <div class="stamp" id="stamp"></div>
+  <div class="grain"></div>
+</div>
+<script src="content.js"></script>
+<script src="statue.js"></script>
+<script>
+const $ = id => document.getElementById(id), scene = $("scene");
+const ROM = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+const dk = o => { const d = new Date(Date.now() + o * 864e5); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
+const FH = fraseSellada(dk(0)), FM = fraseSellada(dk(1));
+const STEPS = [
+  { n: "Despertar", d: "En pie a la primera. Tu primera victoria del día.", w: "EN PIE", x: "05:04" },
+  { n: "Tu frase", d: "«" + FH.t + "»", s: FH.a.toUpperCase(), a: FH.acc, w: "PACTO SELLADO", h: "MANTÉN PARA COMPROMETERTE", x: "ACCIÓN DE HOY" },
+  { n: "Respira", d: "Un minuto en caja. Cuatro dentro, cuatro arriba, cuatro fuera.", w: "CALMA", x: "1 MIN" },
+  { n: "Afirma", d: "Tres frases de la persona que estás esculpiendo.", w: "ERES ESO", x: "3 FRASES" },
+  { n: "Tres batallas", d: "Las tres tareas que harán de hoy un buen día. Ni una más.", w: "A LA BATALLA", x: "3 TAREAS" },
+  { n: "Hábitos", d: "Leer, entrenar, ducha fría. Lo que prometiste.", w: "FORJADO", x: "3 / 5" },
+  { n: "El templo", d: "Tres comidas limpias y tu agua. Tu cuerpo es tu templo.", w: "TEMPLO", x: "COMIDA" },
+  { n: "Examen", d: "¿Qué hice bien? ¿Qué puedo mejorar? ¿Qué agradezco?", w: "DÍA ESCULPIDO", x: "NOCHE" },
+];
+let done, cur, flare, won, sealed;
+function reset() { done = [true, false, false, false, false, false, false, false]; cur = 1; flare = {}; won = false; sealed = true; scene.classList.remove("won"); $("hero").innerHTML = statueSVG(4, "Esteban"); $("day").textContent = "DÍA 29"; $("sub").textContent = "DOM 18 OCT · EL ROSTRO"; card(); layout() }
+const nDone = () => done.filter(Boolean).length;
+const baseBpm = () => won ? 48 : 96 - nDone() * 6;
+
+/* ---------- geometría ---------- */
+let W, H, HY, SW, SX, SY, CARD;
+function layout() {
+  W = scene.clientWidth; H = scene.clientHeight;
+  SW = Math.min(220, H * .27); const sh = SW * 1.3; SY = Math.max(70, H * .085) + 8; SX = W / 2;
+  const hero = $("hero"); hero.style.width = SW + "px"; hero.style.marginLeft = -SW / 2 + "px"; hero.style.top = SY + "px";
+  HY = SY + sh * (250 / 260);
+  CARD = $("sn").getBoundingClientRect().top - scene.getBoundingClientRect().top - 10;
+  const cy = SY + sh * (150 / 260);
+  $("heart").style.left = SX + "px"; $("heart").style.top = cy + "px";
+  $("glow").style.left = SX + "px"; $("glow").style.top = cy + "px";
+  $("stamp").style.top = (SY + sh * .42) + "px";
+  $("road").setAttribute("viewBox", `0 0 ${W} ${H}`);
+}
+addEventListener("resize", layout);
+
+/* ---------- corazón ---------- */
+let bpm = 90, phase = 0, chev = 0, last = performance.now(), holding = false, holdT = 0, hp = 0;
+function beatCurve(x) { return Math.exp(-Math.pow((x - .04) / .045, 2)) + .62 * Math.exp(-Math.pow((x - .27) / .05, 2)) }
+function ripple(cx, cy, strong) {
+  const r = document.createElement("div"); r.className = "ring"; r.style.left = cx + "px"; r.style.top = cy + "px"; scene.appendChild(r);
+  r.animate([{ transform: "scale(.45)", opacity: strong ? .85 : .5 }, { transform: `scale(${strong ? 3.4 : 2.6})`, opacity: 0 }], { duration: strong ? 1500 : 1700, easing: "cubic-bezier(.2,.6,.3,1)" }).onfinish = () => r.remove();
+}
+
+/* ---------- camino ---------- */
+const K = 2.3, f = t => t * (1 + K) / (1 + K * t), finv = s => s / (1 + K - K * s);
+function road(b, now) {
+  const by = H + 30, wN = Math.min(W * .95, 380), wF = SW * .2;
+  const yAt = s => by - (by - HY) * s, wAt = s => wN + (wF - wN) * s;
+  const s0 = (by - (CARD + 30)) / (by - HY), t0 = finv(Math.max(.05, Math.min(.8, s0))), t1 = finv(.9);
+  let g = `<defs><linearGradient id="rf" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="rgb(${getComputedStyle(scene).getPropertyValue("--glow")})" stop-opacity=".10"/><stop offset="1" stop-color="rgb(${getComputedStyle(scene).getPropertyValue("--glow")})" stop-opacity="0"/></linearGradient></defs>`;
+  g += `<path d="M${SX - wN / 2} ${by}L${SX - wF / 2} ${HY}H${SX + wF / 2}L${SX + wN / 2} ${by}Z" fill="url(#rf)"/>`;
+  g += `<path d="M${SX - wN / 2} ${by}L${SX - wF / 2} ${HY}M${SX + wN / 2} ${by}L${SX + wF / 2} ${HY}" stroke="#efe9df" stroke-opacity=".16" stroke-width="1"/>`;
+  g += `<path d="M0 ${HY + .5}H${W}" stroke="#efe9df" stroke-opacity=".08"/>`;
+  // chevrones que avanzan hacia la estatua
+  const N = 14;
+  for (let i = 0; i < N; i++) {
+    const t = ((i / N) + chev) % 1, s = f(t), y = yAt(s), w = wAt(s), hw = w * .14, hh = w * .055;
+    const op = (won ? .5 : .42) * Math.pow(1 - s, .7) * Math.min(1, t * 6);
+    g += `<path d="M${SX - hw} ${y + hh}L${SX} ${y}L${SX + hw} ${y + hh}" fill="none" stroke="#efe9df" stroke-opacity="${op.toFixed(3)}" stroke-width="${Math.max(.8, w * .012).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  // piedras del camino
+  let lastLy = -1e9;
+  for (let i = 7; i >= 0; i--) {
+    const t = t0 + (t1 - t0) * (i / 7), s = f(t), y = yAt(s), w = wAt(s), rx = w * .3, ry = Math.max(2.5, w * .07);
+    const red = getComputedStyle(scene).getPropertyValue("--red");
+    if (done[i]) {
+      g += `<ellipse cx="${SX}" cy="${y}" rx="${rx * 1.5}" ry="${ry * 2}" fill="${red}" opacity="${(.14 + .1 * b).toFixed(3)}"/>`;
+      g += `<ellipse cx="${SX}" cy="${y}" rx="${rx}" ry="${ry}" fill="${red}"/>`;
+    } else if (i === cur && !won) {
+      g += `<ellipse cx="${SX}" cy="${y}" rx="${rx * (1 + .12 * b)}" ry="${ry * (1 + .12 * b)}" fill="${red}" fill-opacity=".1" stroke="${red}" stroke-opacity="${(.55 + .45 * b).toFixed(3)}" stroke-width="${Math.max(1.2, w * .012).toFixed(2)}"/>`;
+    } else g += `<ellipse cx="${SX}" cy="${y}" rx="${rx}" ry="${ry}" fill="none" stroke="#efe9df" stroke-opacity=".22" stroke-width="1"/>`;
+    const fl = flare[i] ? (now - flare[i]) / 1100 : 2;
+    if (fl < 1) g += `<ellipse cx="${SX}" cy="${y}" rx="${rx * (1 + fl * 2.2)}" ry="${ry * (1 + fl * 2.2)}" fill="none" stroke="${red}" stroke-opacity="${(1 - fl).toFixed(3)}" stroke-width="2"/>`;
+    const fs = 8 + w * .035, showL = y - lastLy > fs * 1.05 || i === cur;
+    if (showL) lastLy = y;
+    if (showL) g += `<text x="${SX - rx - 8 - w * .02}" y="${y + fs * .35}" text-anchor="end" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${fs.toFixed(1)}" letter-spacing=".08em" fill="${done[i] ? red : i === cur ? "#efe9df" : "#7d776d"}" fill-opacity="${i === cur || done[i] ? 1 : .7}">${ROM[i]}</text>`;
+    g += `<ellipse class="st" data-i="${i}" cx="${SX}" cy="${y}" rx="${Math.max(rx * 1.6, 26)}" ry="${Math.max(ry * 3, 16)}" fill="transparent"/>`;
+  }
+  $("road").innerHTML = g;
+}
+$("road").addEventListener("click", e => { const el = e.target.closest(".st"); if (!el || won) return; const i = +el.dataset.i; if (!done[i]) { cur = i; card() } });
+
+/* ---------- bucle ---------- */
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (holding) { hp = Math.min(1, (now - holdT) / 1500); if (hp >= 1) { holding = false; complete() } } else hp = Math.max(0, hp - dt * 2.5);
+  $("arc").style.strokeDashoffset = (232.5 * (1 - hp)).toFixed(1);
+  const target = baseBpm() + (158 - baseBpm()) * hp * hp;
+  bpm += (target - bpm) * Math.min(1, dt * 4);
+  const prev = phase; phase += dt * bpm / 60;
+  const b = beatCurve(phase % 1);
+  if (Math.floor(phase) !== Math.floor(prev)) {
+    ripple(SX, parseFloat($("heart").style.top), hp > .2);
+    if (hp > .2 && navigator.vibrate) navigator.vibrate(14);
+  }
+  const lv = .45 + nDone() * .07;
+  $("glow").style.transform = `scale(${(1 + .09 * b + .25 * hp).toFixed(4)})`; $("glow").style.opacity = (lv + .4 * b).toFixed(3);
+  $("heart").style.transform = `scale(${(1 + .7 * b + hp).toFixed(3)})`; $("heart").style.opacity = (.55 + .06 * nDone() + .4 * b).toFixed(3);
+  $("hero").style.transform = `scale(${(1 + .012 * b).toFixed(4)})`;
+  $("hh").style.transform = $("hz").style.transform = `scale(${(1 + .28 * b).toFixed(3)})`;
+  $("bpm").textContent = Math.round(bpm);
+  chev = (chev + dt * (.05 + .07 * b) * (bpm / 60)) % 1;
+  road(b, now);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- interacción ---------- */
+const hold = $("hold");
+hold.addEventListener("pointerdown", e => { e.preventDefault(); holding = true; holdT = performance.now() - hp * 1500; try { hold.setPointerCapture(e.pointerId) } catch (_) { } });
+["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => hold.addEventListener(ev, () => holding = false));
+hold.addEventListener("contextmenu", e => e.preventDefault());
+$("day").onclick = reset;
+
+function card() {
+  $("cnt").textContent = `PULSO · ${nDone()}/8`;
+  if (won) {
+    $("sn").textContent = "VIII / VIII"; $("sx").textContent = "DÍA 30 ESCULPIDO"; $("st").textContent = "Palabra cumplida";
+    $("sd").textContent = "Hiciste lo que dijiste. La piedra lo recuerda."; $("ss").innerHTML = "MAÑANA 05:00 · TE ESPERA SELLADA UNA FRASE DE " + FM.a.toUpperCase() + "<br>TU ESTATUA HA GANADO SUS DETALLES";
+    $("hl").innerHTML = "MANTÉN PARA<br>VOLVER A EMPEZAR<small>(PROTOTIPO)</small>"; requestAnimationFrame(layout); return;
+  }
+  const s = STEPS[cur];
+  if (cur === 1 && sealed) {
+    $("sn").textContent = "PASO II / VIII"; $("sx").textContent = "SELLADA"; $("st").textContent = "Frase sellada";
+    $("sd").textContent = `Hoy te espera una frase de ${FH.a} y una acción para ti.`; $("ss").textContent = "SOLO SE ABRE UNA VEZ AL DÍA";
+    $("hl").innerHTML = "MANTÉN PARA<br>ROMPER EL SELLO<small>LA LEERÁS SOLO TÚ</small>"; requestAnimationFrame(layout); return;
+  }
+  $("sn").textContent = `PASO ${ROM[cur]} / VIII`; $("sx").textContent = s.x || ""; $("st").textContent = s.n; $("sd").textContent = s.d; $("ss").innerHTML = s.a ? `— ${s.s}<br><b style="color:var(--red)">ACCIÓN ·</b> <span style="color:var(--bone);letter-spacing:.02em;font-weight:500;line-height:1.55;text-transform:none;font-size:11px">${s.a}</span>` : (s.s || "");
+  requestAnimationFrame(layout);
+  $("hl").innerHTML = (s.h || "MANTÉN PARA CUMPLIR").replace(" PARA", "<br>PARA") + `<small>${8 - nDone()} PASOS HASTA TU ESTATUA</small>`;
+}
+function complete() {
+  if (won) { reset(); return }
+  if (cur === 1 && sealed) { sealed = false; strike("ABIERTA"); hp = 0; card(); $("card").animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { duration: 600, easing: "ease-out" }); return }
+  done[cur] = true; flare[cur] = performance.now();
+  const all = nDone() === 8;
+  strike(all ? "DÍA<br>ESCULPIDO" : STEPS[cur].w, all);
+  if (all) { won = true; scene.classList.add("won"); setTimeout(evolve, 1500) } else { let n = done.indexOf(false, cur); if (n < 0) n = done.indexOf(false); cur = n }
+  hp = 0; card();
+}
+function evolve() {
+  const h = $("hero");
+  h.animate([{ opacity: 1, filter: "brightness(1)" }, { opacity: .2, filter: "brightness(3)" }], { duration: 450, easing: "ease-in" }).onfinish = () => {
+    h.innerHTML = statueSVG(5, "Esteban"); $("day").textContent = "DÍA 30"; $("sub").textContent = "NUEVA FORMA · LOS DETALLES";
+    h.animate([{ opacity: .2, filter: "brightness(3)" }, { opacity: 1, filter: "brightness(1)" }], { duration: 900, easing: "ease-out" });
+    strike("LOS<br>DETALLES", true);
+  };
+}
+function strike(word, big) {
+  const cx = SX, cy = parseFloat($("heart").style.top);
+  for (let i = 0; i < (big ? 34 : 18); i++) {
+    const c = document.createElement("div"), sz = 3 + Math.random() * 6, a = Math.random() * Math.PI * 2, v = 60 + Math.random() * (big ? 200 : 130);
+    c.className = "chip"; c.style.cssText = `left:${cx - sz / 2 + (Math.random() - .5) * 40}px;top:${cy - sz / 2 + (Math.random() - .5) * 60}px;width:${sz}px;height:${sz}px;background:${Math.random() < .3 ? "#cfc7b9" : "#ece6db"}`;
+    scene.appendChild(c);
+    c.animate([{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: `translate(${Math.cos(a) * v}px,${Math.sin(a) * v * .7 + 90}px) rotate(${(Math.random() - .5) * 720}deg)`, opacity: 0 }], { duration: 900 + Math.random() * 500, easing: "cubic-bezier(.15,.7,.35,1)" }).onfinish = () => c.remove();
+  }
+  scene.animate([{ transform: "translate(0,0)" }, { transform: "translate(-5px,3px)" }, { transform: "translate(4px,-3px)" }, { transform: "translate(-2px,1px)" }, { transform: "translate(0,0)" }], { duration: 300 });
+  $("flash").animate([{ opacity: big ? .9 : .6 }, { opacity: 0 }], { duration: big ? 1200 : 650, easing: "ease-out" });
+  ripple(cx, cy, true); setTimeout(() => ripple(cx, cy, true), 180);
+  const st = $("stamp"); st.innerHTML = word; st.style.fontSize = big ? "64px" : "50px";
+  st.animate([{ transform: "translate(-50%,-50%) scale(2.4) rotate(-9deg)", opacity: 0 }, { transform: "translate(-50%,-50%) scale(1) rotate(-6deg)", opacity: 1, offset: .18 }, { transform: "translate(-50%,-50%) scale(1) rotate(-6deg)", opacity: 1, offset: .78 }, { transform: "translate(-50%,-60%) scale(.97) rotate(-6deg)", opacity: 0 }], { duration: big ? 2600 : 1500, easing: "cubic-bezier(.2,.8,.3,1)" });
+  if (navigator.vibrate) navigator.vibrate(big ? [30, 60, 30, 60, 80] : [40]);
+}
+reset();
+document.fonts && document.fonts.ready.then(layout);
+requestAnimationFrame(frame);
+</script>
+</body></html>

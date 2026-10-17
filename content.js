@@ -73,3 +73,38 @@ const HABITOS_ESTOICOS = [
 ];
 /* La frase del día: la misma para todo el día, distinta cada día */
 function fraseDelDia(k) { const d = new Date(k + "T12:00:00"), n = Math.floor(d.getTime() / 864e5); return FRASES[((n % FRASES.length) + FRASES.length) % FRASES.length] }
+/* Frases de desarrollo personal, cada una con su acción de hoy (traducciones propias de citas breves) */
+const FRASES_EXITO = [
+  { t: "Lo que la mente puede concebir y creer, lo puede lograr.", a: "Napoleon Hill", acc: "Escribe en una línea lo que vas a conseguir y léela en voz alta antes de dormir." },
+  { t: "No esperes. El momento nunca será el perfecto.", a: "Napoleon Hill", acc: "Dedica hoy 5 minutos a eso que llevas semanas aplazando." },
+  { t: "El punto de partida de todo logro es el deseo.", a: "Napoleon Hill", acc: "Escribe tu deseo principal en un papel y déjalo donde lo veas al despertar." },
+  { t: "El nombre de una persona es, para ella, el sonido más dulce.", a: "Dale Carnegie", acc: "Hoy llama por su nombre a cada persona con la que hables." },
+  { t: "Si quieres recoger miel, no des patadas a la colmena.", a: "Dale Carnegie", acc: "Hoy no critiques a nadie. Si algo te molesta, pregunta en vez de juzgar." },
+  { t: "Haz que la otra persona se sienta importante, y hazlo con sinceridad.", a: "Dale Carnegie", acc: "Dile hoy a alguien algo concreto que haya hecho bien." },
+  { t: "La disciplina es el puente entre las metas y los logros.", a: "Jim Rohn", acc: "Haz antes de las 10:00 la tarea que más te cuesta." },
+  { t: "Eres el promedio de las cinco personas con las que más tiempo pasas.", a: "Jim Rohn", acc: "Busca hoy 15 minutos con la persona que más te eleva." },
+  { t: "Trabaja más en ti mismo que en tu trabajo.", a: "Jim Rohn", acc: "Dedica 20 minutos a aprender algo que te haga mejor." },
+  { t: "No tienes que ser grande para empezar, pero tienes que empezar para ser grande.", a: "Zig Ziglar", acc: "Da hoy el primer paso de tu proyecto más grande, por pequeño que sea." },
+  { t: "Dicen que la motivación no dura. Tampoco la ducha: por eso se recomienda a diario.", a: "Zig Ziglar", acc: "Lee tus afirmaciones en voz alta al despertar y al acostarte." },
+  { t: "Empieza con un fin en mente.", a: "Stephen Covey", acc: "Antes de abrir el móvil, escribe en tres líneas cómo quieres que sea tu día." },
+  { t: "Lo principal es que lo principal siga siendo lo principal.", a: "Stephen Covey", acc: "Elige tu única prioridad de hoy y protégela con una hora sin interrupciones." },
+  { t: "Gana tu mañana, eleva tu vida.", a: "Robin Sharma", acc: "Mañana, la primera hora sin pantallas: mover el cuerpo, pensar y aprender." },
+  { t: "El cambio es duro al principio, caótico en medio y precioso al final.", a: "Robin Sharma", acc: "Escribe qué cambio estás atravesando y en qué fase estás." },
+  { t: "Si tienes que comerte dos ranas, cómete primero la más fea.", a: "Brian Tracy", acc: "Tu tarea más dura, la primera de la mañana. Sin mirar el correo antes." },
+  { t: "El hombre es, literalmente, lo que piensa.", a: "James Allen", acc: "Cada vez que te pilles en un pensamiento negativo hoy, cámbialo por uno útil." },
+  { t: "Acostarse temprano y madrugar hace al hombre sano, rico y sabio.", a: "Benjamin Franklin", acc: "Esta noche, a la cama 30 minutos antes." },
+  { t: "¿Amas la vida? No malgastes el tiempo: es la materia de la que está hecha.", a: "Benjamin Franklin", acc: "Mira cuánto tiempo pasas hoy en redes y quítale 30 minutos." },
+  { t: "Haz lo que temes y la muerte del miedo es segura.", a: "Ralph Waldo Emerson", acc: "Haz hoy una cosa pequeña que te dé miedo: una llamada, un mensaje, una pregunta." },
+  { t: "Te lo pueden quitar todo menos una cosa: la libertad de elegir tu actitud.", a: "Viktor Frankl", acc: "Ante el primer contratiempo de hoy, elige a conciencia cómo respondes." },
+  { t: "Persistiré hasta triunfar.", a: "Og Mandino", acc: "Retoma hoy algo que abandonaste y dale 10 minutos." },
+  { t: "Nos convertimos en aquello en lo que pensamos.", a: "Earl Nightingale", acc: "Escribe en una frase en quién te estás convirtiendo y léela tres veces hoy." },
+  { t: "Lo que da forma a tu vida no es lo que haces de vez en cuando, sino lo que haces siempre.", a: "Tony Robbins", acc: "Elige un hábito diminuto y hazlo hoy sin excusas." },
+  { t: "Somos lo que hacemos repetidamente. La excelencia no es un acto, sino un hábito.", a: "Will Durant", acc: "Repite hoy, a la misma hora, el hábito que quieres que te defina." },
+  { t: "Un viaje de mil millas comienza con un solo paso.", a: "Lao Tse", acc: "Escribe el siguiente paso de tu meta y hazlo antes de comer." },
+];
+/* La frase sellada del día: alterna estoicos y desarrollo personal, siempre con una acción */
+function fraseSellada(k) {
+  const d = new Date(k + "T12:00:00"), n = Math.floor(d.getTime() / 864e5), m = ((n % 2) + 2) % 2;
+  if (m === 0) { const f = FRASES_EXITO[((Math.floor(n / 2) % FRASES_EXITO.length) + FRASES_EXITO.length) % FRASES_EXITO.length]; return { t: f.t, a: f.a, acc: f.acc } }
+  const f = FRASES[((Math.floor(n / 2) % FRASES.length) + FRASES.length) % FRASES.length]; return { t: f.t, a: f.a, acc: PRACTICAS[f.p].hoy, prac: f.p };
+}
