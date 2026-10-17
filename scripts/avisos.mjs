@@ -1,5 +1,5 @@
-// Avisos estoicos de Levo. GitHub Actions lo lanza cada 15 minutos.
-// Al despertar (hora de cada usuario): la frase del día. 13:00: lo que falta. 21:00: el examen nocturno.
+// Avisos de Levo, sin agobiar: 3 al día como máximo. GitHub Actions lo lanza cada 15 minutos.
+// Al despertar: tu frase está sellada (sin desvelarla). 13:00: solo si vas por menos de 3 pasos. 21:00: solo si falta el examen.
 import fs from "node:fs";
 import webpush from "web-push";
 const { SUPABASE_URL: U, SUPABASE_SERVICE_KEY: K, VAPID_PUBLIC, VAPID_PRIVATE, FORZAR = "" } = process.env;
@@ -10,7 +10,7 @@ const api = async (path, opt = {}) => {
   if (!r.ok) throw new Error(`${path}: ${r.status} ${await r.text()}`);
   return r.status === 204 ? null : r.json().catch(() => null);
 };
-const { FRASES, fraseDelDia } = new Function(fs.readFileSync(new URL("../content.js", import.meta.url), "utf8") + ";return { FRASES, fraseDelDia };")();
+const { fraseSellada } = new Function(fs.readFileSync(new URL("../content.js", import.meta.url), "utf8") + ";return { fraseSellada };")();
 const send = async (subs, title, body, tag) => { for (const s of subs) { try { await webpush.sendNotification(s.sub, JSON.stringify({ title, body, tag })); console.log("Enviado:", body.slice(0, 80)) } catch (e) { console.log("Fallo push:", e.statusCode); if (e.statusCode === 404 || e.statusCode === 410) await api(`push_subs?endpoint=eq.${encodeURIComponent(s.endpoint)}`, { method: "DELETE" }) } } };
 
 /* Toques entre amigos (si los hay) */
@@ -36,15 +36,14 @@ for (const uid of [...new Set(subs.map(s => s.user_id))]) {
   const habits = await api(`habits?user_id=eq.${uid}&active=eq.true&select=id`), done = ((await api(`days?user_id=eq.${uid}&day=eq.${today}&select=done`))[0] || {}).done || {};
   const hd = habits.filter(h => done[h.id]).length;
   const aff = (j.aff || []).filter(s => s && s.trim()).length, tasks = (j.tasks || []).filter(t => t && t.t && t.t.trim()), meals = ["desayuno", "comida", "cena"].filter(m => j.meals && j.meals[m]).length;
-  const steps = [!!j.wake, !!j.breath, !!j.commit, aff >= 3, tasks.length && tasks.filter(t => t.done).length >= Math.min(2, tasks.length), habits.length && hd / habits.length >= .6, meals >= 3, !!(j.exam && (j.exam.bien || j.exam.mejorar || j.exam.gracias))];
-  const f = fraseDelDia(today);
+  const examDone = !!(j.exam && (j.exam.bien || j.exam.mejorar || j.exam.gracias));
+  const steps = [!!j.wake, !!j.commit, !!j.breath, aff >= 3, tasks.length && tasks.filter(t => t.done).length >= Math.min(2, tasks.length), habits.length && hd / habits.length >= .6, meals >= 3, examDone];
+  const n = steps.filter(Boolean).length, f = fraseSellada(today);
   let body;
   if (slot === "prueba") body = "Aviso de prueba: si lees esto, los avisos funcionan.";
-  else if (slot === "amanecer") body = `«${f.t}» — ${f.a}. Tu ritual te espera.`;
-  else if (slot === "mediodia") {
-    const falta = [!j.breath && "respirar", aff < 3 && "afirmaciones", !tasks.length && "tus 3 tareas", habits.length && hd < habits.length && `${habits.length - hd} hábitos`, meals < 2 && "apuntar tus comidas"].filter(Boolean);
-    body = falta.length ? `Te falta: ${falta.join(", ")}. Cada paso esculpe tu estatua.` : "Vas firme. Sigue así esta tarde.";
-  } else body = "Antes de dormir, tu examen: ¿qué hiciste bien?, ¿qué puedes mejorar?, ¿qué agradeces?" + (steps.filter(Boolean).length < 6 ? " Aún puedes completar el ritual de hoy." : "");
+  else if (slot === "amanecer") { if (j.open) continue; body = `Tu frase de hoy está sellada. Es de ${f.a}, y trae una acción para ti.` }
+  else if (slot === "mediodia") { if (n >= 3) continue; body = `Tu camino va por la piedra ${["I", "II", "III"][n] || "I"} de VIII. Un paso más y tu estatua lo nota.` }
+  else { if (examDone) continue; body = n >= 5 ? "Te queda el examen: tres preguntas y tu día queda esculpido." : "Antes de dormir, tu examen: tres preguntas, un minuto."; }
   await send(mine, "Levo", body.length > 180 ? body.slice(0, 177) + "…" : body, slot);
   if (slot !== "prueba") await api("avisos", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ user_id: uid, day: today, slot }) });
 }

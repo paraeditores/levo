@@ -105,6 +105,6 @@ const FRASES_EXITO = [
 /* La frase sellada del día: alterna estoicos y desarrollo personal, siempre con una acción */
 function fraseSellada(k) {
   const d = new Date(k + "T12:00:00"), n = Math.floor(d.getTime() / 864e5), m = ((n % 2) + 2) % 2;
-  if (m === 0) { const f = FRASES_EXITO[((Math.floor(n / 2) % FRASES_EXITO.length) + FRASES_EXITO.length) % FRASES_EXITO.length]; return { t: f.t, a: f.a, acc: f.acc } }
-  const f = FRASES[((Math.floor(n / 2) % FRASES.length) + FRASES.length) % FRASES.length]; return { t: f.t, a: f.a, acc: PRACTICAS[f.p].hoy, prac: f.p };
+  const L = m === 0 ? FRASES_EXITO : FRASES, i = ((Math.floor(n / 2) % L.length) + L.length) % L.length, f = L[i];
+  return m === 0 ? { id: "e" + i, t: f.t, a: f.a, acc: f.acc } : { id: "s" + i, t: f.t, a: f.a, acc: PRACTICAS[f.p].hoy, prac: f.p };
 }
