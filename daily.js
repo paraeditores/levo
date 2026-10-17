@@ -121,6 +121,7 @@ function renderDaily() {
 }
 /* Regalo flotando en la habitación */
 window.roomExtras = x => {
+  if (window._ownSet) return;
   if (!uid || !habits.length || claimedToday()) return;
   const [gx, gy] = P(1.2, 1.9), b = Math.round(Math.sin(Date.now() / 260) * 2) - 4;
   x.fillStyle = "rgba(0,0,0,.25)"; x.beginPath(); x.ellipse(gx, gy, 7, 2.5, 0, 0, Math.PI * 2); x.fill();

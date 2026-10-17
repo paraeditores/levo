@@ -106,7 +106,7 @@ function openOnboarding(edit) {
   ob.open = true; ob.edit = !!edit; ob.step = 0;
   ob.look = { ...LOOK_DEF, ...(outfit._look || {}) };
   ob.hard = outfit._cfg ? !!outfit._cfg.hard : (habits.length ? true : false);
-  ob.picks = new Set();
+  ob.picks = new Set(); ob.name = (outfit._cfg && outfit._cfg.name) || "";
   ob.steps = edit ? ["look", "modo"] : habits.length ? ["hola", "look", "modo", "regalo"] : ["hola", "look", "habitos", "modo", "regalo"];
   obEl().hidden = false; obEl().classList.remove("out"); draw(); tickPreview();
 }
@@ -124,7 +124,7 @@ function draw() {
     next.textContent = "Crear mi personaje";
   }
   if (s === "look") {
-    w.innerHTML = `<h1>${ob.edit ? "Tu personaje" : "¿Cómo eres?"}</h1><div class="stage"><canvas id="obCv" width="48" height="52"></canvas><button class="dice" id="obDice" aria-label="Aspecto aleatorio">🎲</button></div>`;
+    w.innerHTML = `<h1>${ob.edit ? "Tu personaje" : "¿Cómo eres?"}</h1><input id="obName" maxlength="18" placeholder="Tu nombre (lo verán tus amigos)" autocomplete="given-name"><div class="stage"><canvas id="obCv" width="48" height="52"></canvas><button class="dice" id="obDice" aria-label="Aspecto aleatorio">🎲</button></div>`;
     const group = (label, items, key, isSw) => {
       const g = document.createElement("div"); g.className = "opt"; g.innerHTML = `<span>${label}</span><div class="row-sc"></div>`;
       const row = g.querySelector(".row-sc");
@@ -136,6 +136,7 @@ function draw() {
       });
       w.append(g);
     };
+    $("obName").value = ob.name || ""; $("obName").oninput = e => { ob.name = e.target.value.trim() };
     group("Piel", SKINS, "skin", true); group("Peinado", HS, "hs"); group("Color de pelo", HAIRS, "hc", true); group("Barba", BEARDS, "beard"); group("Gafas", GLASSES, "glasses");
     $("obDice").onclick = () => { const r = a => Math.floor(Math.random() * a); ob.look = { skin: r(SKINS.length), hs: HS[r(HS.length)][0], hc: r(HAIRS.length), beard: BEARDS[r(3)][0], glasses: GLASSES[r(3)][0] }; ob.wave = 1.2; draw() };
     next.textContent = ob.edit ? "Siguiente" : "Este soy yo";
@@ -171,7 +172,7 @@ async function next() {
   const s = ob.steps[ob.step];
   if (ob.step < ob.steps.length - 1) { ob.step++; draw(); return }
   // guardar
-  outfit = { ...outfit, _look: ob.look, _cfg: { ...(outfit._cfg || {}), hard: ob.hard, onb: true } };
+  outfit = { ...outfit, _look: ob.look, _cfg: { ...(outfit._cfg || {}), hard: ob.hard, onb: true, name: ob.name || (outfit._cfg && outfit._cfg.name) || "" } };
   HARD = ob.hard;
   if (!ob.demo && uid && uid !== "demo") {
     write(() => sb.from("profile").upsert({ user_id: uid, outfit, updated_at: new Date().toISOString() }, { onConflict: "user_id" }));

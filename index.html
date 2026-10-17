@@ -220,10 +220,11 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
   </section>
 
   <form class="card enter" id="login" hidden>
-    <h2>Entra en Levo</h2>
+    <h2 id="loginTitle">Entra en Levo</h2>
     <input id="email" type="email" autocomplete="username" placeholder="Email" required>
-    <input id="pass" type="password" autocomplete="current-password" placeholder="Contraseña" required>
-    <button class="btn" type="submit">Entrar</button>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="Contraseña" minlength="8" required>
+    <button class="btn" type="submit" id="loginBtn">Entrar</button>
+    <button class="ghost" type="button" id="loginSwap">¿Primera vez? Crear cuenta</button>
     <p id="loginMsg"></p>
   </form>
 
@@ -236,6 +237,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     <button class="dchip" id="dailyChip" hidden></button>
   </section></div>
   <section class="rescue" id="rescue" hidden aria-live="polite"></section>
+  <section class="buddy" id="buddy" hidden></section>
   <section class="hero enter" aria-label="Tu progreso de hoy">
     <div class="ring">
       <svg viewBox="0 0 150 150" id="rings" aria-hidden="true"></svg>
@@ -317,6 +319,20 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
     </section>
   </div>
 
+  <div class="tab" id="tab-amigos" hidden>
+    <section class="codecard enter">
+      <small>Tu código de amigo</small>
+      <div class="code" id="myCode">······</div>
+      <button class="ghost" id="copyCode" style="justify-self:start;position:relative">Copiar invitación</button>
+    </section>
+    <section class="card">
+      <h2>Añadir amigo</h2>
+      <div class="addrow"><input id="friendCode" maxlength="6" placeholder="Código de 6 letras" autocomplete="off"><button class="btn accent" id="addFriend">Añadir</button></div>
+    </section>
+    <section class="flist" id="flist"></section>
+    <p class="status">Tus amigos ven tu habitación, tu nivel, tu racha y tu % de hoy. Nunca ven qué hábitos tienes.</p>
+  </div>
+
   <p class="status" id="status"></p>
 </main>
 
@@ -337,6 +353,7 @@ input,select{font:inherit;color:var(--fg);background:var(--soft);border:0;border
 <nav class="tabbar" aria-label="Secciones">
   <button id="tb-hoy" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.6 2.5L16 9.5"/></svg>Hoy</button>
   <button id="tb-casa" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5V20H4z"/><path d="M10 20v-5h4v5"/></svg>Casa</button>
+  <button id="tb-amigos" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16 14.6c2.8-.3 5 1.3 5.5 4.4"/></svg>Amigos</button>
   <button id="tb-premios" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M12 9v11M4 13h16M12 9c-2-4-6-3-5 0M12 9c2-4 6-3 5 0"/></svg>Premios</button>
 </nav>
 
@@ -499,9 +516,15 @@ $("pushBtn").onclick=async()=>{
   }catch(e){status("No pude activar los avisos: "+(e.message||e))}
 };
 
-$("login").addEventListener("submit",async e=>{e.preventDefault();$("loginMsg").textContent="Entrando…";
-  const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("pass").value});
-  $("loginMsg").textContent=error?"Email o contraseña incorrectos.":""});
+let signup=false;
+$("loginSwap").onclick=()=>{signup=!signup;$("loginTitle").textContent=signup?"Crea tu cuenta":"Entra en Levo";$("loginBtn").textContent=signup?"Crear cuenta":"Entrar";$("loginSwap").textContent=signup?"Ya tengo cuenta":"¿Primera vez? Crear cuenta";$("pass").autocomplete=signup?"new-password":"current-password";$("loginMsg").textContent=""};
+$("login").addEventListener("submit",async e=>{e.preventDefault();const email=$("email").value.trim(),password=$("pass").value;
+  if(signup){$("loginMsg").textContent="Creando tu cuenta…";
+    const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:"https://paraeditores.github.io/levo/"}});
+    $("loginMsg").textContent=error?(/not allowed|disabled/i.test(error.message)?"El registro está cerrado por ahora: Levo está en beta privada.":"No se pudo crear la cuenta: "+error.message):(data.session?"":"Te hemos enviado un email. Confírmalo y vuelve a entrar aquí.");return}
+  $("loginMsg").textContent="Entrando…";
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  $("loginMsg").textContent=error?(/confirm/i.test(error.message)?"Confirma tu email antes de entrar.":"Email o contraseña incorrectos."):""});
 
 if(location.hash==="#demo"){uid="demo";loaded=true;habits=[["a","Entrenar 30 min","cuerpo"],["b","8.000 pasos","cuerpo"],["c","Beber 2 litros de agua","cuerpo"],["d","Cerrar las 3 tareas clave","trabajo"],["e","Leer 20 minutos","mente"],["f","Hablar con familia","vida"]].map(([id,name,area])=>({id,name,area}));days={[dayKey(0)]:{done:{a:true,c:true,d:true}},[dayKey(-1)]:{done:{a:true,b:true,c:true,d:true}},[dayKey(-2)]:{done:{c:true}}};sb.from=()=>({upsert:async()=>({}),update:()=>({eq:async()=>({})}),insert:async()=>({})});load=async()=>render();render()}
 else sb.auth.onAuthStateChange((_e,session)=>{
@@ -518,5 +541,6 @@ render();
 <script src="onboarding.js"></script>
 <script src="daily.js"></script>
 <script src="share.js"></script>
+<script src="friends.js"></script>
 </body>
 </html>

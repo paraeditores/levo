@@ -90,7 +90,7 @@ function earned() {
 const spent = () => purchases.reduce((t, p) => t + p.cost, 0);
 const coins = () => Math.max(0, earned() - spent());
 const level = () => Math.floor(xp() / 150) + 1;
-const owned = id => { const it = ALL.find(i => i.id === id); if (it && it.base) return true; if (it && it.lvGift) return level() >= it.lvGift; return purchases.some(p => (p.kind === "item" || p.kind === "cofre") && p.item === id) };
+const owned = id => { if (window._ownSet) return window._ownSet.has(id); const it = ALL.find(i => i.id === id); if (it && it.base) return true; if (it && it.lvGift) return level() >= it.lvGift; return purchases.some(p => (p.kind === "item" || p.kind === "cofre") && p.item === id) };
 const activePremio = () => { const now = Date.now(); return purchases.filter(p => p.kind === "premio").map(p => ({ ...p, ends: Date.parse(p.at) + p.minutes * 60e3 })).find(p => p.ends > now) };
 
 /* ---------- Escudos de racha y días de rescate ---------- */
@@ -431,7 +431,7 @@ function milestones() {
   for (const k of Object.keys(days).sort()) { if (k < START || !okDay(k)) continue; if ((prevStreak(k) + 1) % 7 === 0) n++ }
   return n;
 }
-const bongoUnlocked = () => milestones() >= 2;
+const bongoUnlocked = () => window._ownSet ? window._ownSet.has("@bongo") : milestones() >= 2;
 const chestsLeft = () => Math.max(0, milestones() - new Set(purchases.filter(p => p.kind === "cofre").map(p => p.minutes)).size);
 function renderCofres() {
   const n = chestsLeft(), st = streak();
@@ -508,11 +508,11 @@ async function loadCasa() {
   render(); renderCasa(); if (window.maybeOnboard) maybeOnboard();
 }
 function setTab(t) {
-  tab = t; ["hoy", "casa", "premios"].forEach(n => { $("tab-" + n).hidden = n !== t; $("tb-" + n).setAttribute("aria-selected", n === t) });
-  const slot = $(t === "casa" ? "roomSlotCasa" : "roomSlotHoy"); if (slot && t !== "premios") slot.append($("roomWrap"));
-  window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" }); renderCasa();
+  tab = t; ["hoy", "casa", "premios", "amigos"].forEach(n => { $("tab-" + n).hidden = n !== t; $("tb-" + n).setAttribute("aria-selected", n === t) });
+  const slot = $(t === "casa" ? "roomSlotCasa" : "roomSlotHoy"); if (slot && (t === "hoy" || t === "casa")) slot.append($("roomWrap"));
+  window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" }); renderCasa(); if (window.onTab) onTab(t);
 }
-["hoy", "casa", "premios"].forEach(n => $("tb-" + n).onclick = () => setTab(n));
+["hoy", "casa", "premios", "amigos"].forEach(n => $("tb-" + n).onclick = () => setTab(n));
 document.querySelectorAll("[data-shop]").forEach(b => b.onclick = () => { casaTab = b.dataset.shop; document.querySelectorAll("[data-shop]").forEach(x => x.setAttribute("aria-selected", x === b)); renderCasa() });
 window.onRendered = renderCasa;
 window.loadCasa = loadCasa;

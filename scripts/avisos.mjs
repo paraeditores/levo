@@ -13,6 +13,18 @@ const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europ
 const today = `${p.year}-${p.month}-${p.day}`, hour = +p.hour;
 const shift = n => { const d = new Date(today + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const SLOTS = [[8, "manana"], [13, "mediodia"], [18, "tarde"], [22, "cierre"]];
+/* Toques entre amigos: se mandan en cada pasada */
+const pend = await api("nudges?sent=eq.false&select=id,from_id,to_id");
+if (pend.length) {
+  const allSubs = await api("push_subs?select=endpoint,user_id,sub"), rooms = await api("rooms?select=user_id,name");
+  for (const n of pend) {
+    const name = (rooms.find(r => r.user_id === n.from_id) || {}).name || "Un amigo";
+    for (const s2 of allSubs.filter(x => x.user_id === n.to_id)) { try { await webpush.sendNotification(s2.sub, JSON.stringify({ title: "Levo 👊", body: `${name} te ha dado un toque. ¡A por tus hábitos!`, tag: "toque" })) } catch (e) { console.log("Fallo toque:", e.statusCode) } }
+    await api(`nudges?id=eq.${n.id}`, { method: "PATCH", body: JSON.stringify({ sent: true }) });
+  }
+  console.log(`Toques enviados: ${pend.length}`);
+}
+
 let slot = FORZAR || (SLOTS.filter(([h]) => h <= hour && hour - h < 2).pop() || [])[1];
 if (!slot) { console.log(`Madrid ${hour}h: no toca aviso.`); process.exit(0); }
 const START = "2026-10-17";
