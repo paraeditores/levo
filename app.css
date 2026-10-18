@@ -445,3 +445,41 @@ textarea{resize:none;min-height:60px;line-height:1.4}
 .tips li::before{content:"·";color:var(--blue);font-weight:900;margin-right:8px}
 .fl-card{overflow-x:hidden}
 .fl-clock{font-size:clamp(60px,21vw,104px);font-stretch:116%}
+
+/* --- tu día: cada cosa a su hora --- */
+.plan{display:grid;gap:12px}
+.addbtn{flex:none;height:42px;padding:0 16px;border-radius:21px;background:var(--blue);color:#fff;font-weight:800;font-size:14.5px;font-stretch:108%;box-shadow:0 6px 18px rgba(31,63,255,.3)}
+.addbtn:active{transform:scale(.96)}
+.tl{display:grid;gap:10px}
+.slot{background:var(--s1);border-radius:20px;padding:12px 14px 8px;box-shadow:0 1px 0 var(--line);display:grid;gap:2px;transition:opacity .3s}
+.slot.now{box-shadow:0 0 0 2px var(--blue),0 12px 28px rgba(31,63,255,.16)}
+.slot.past{opacity:.55}
+.sl-h{display:flex;align-items:center;gap:8px;min-height:24px}
+.sl-h b{font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.sl-h span:not(.now-pill){font-size:12.5px;color:var(--muted);font-weight:600}
+.sl-h .now-pill{margin-left:auto}
+.sl-why{margin:2px 0 4px;font-size:13.5px;line-height:1.35;color:var(--blue);font-weight:600}
+.it{display:flex;align-items:center;gap:12px;padding:7px 0}
+.it + .it{border-top:1px solid var(--line)}
+.itck{width:34px;height:34px;flex:none;border-radius:50%;border:2px solid var(--faint);display:grid;place-items:center;color:var(--blue);font-weight:900;font-size:20px;text-align:center;transition:all .2s}
+.itck svg{width:18px!important;height:18px!important}
+.it.routine .itck{border-color:var(--blue);background:var(--blue-t)}
+.it.done .itck{background:var(--blue);border-color:var(--blue);color:#fff;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.itn{flex:1;min-width:0;text-align:left}
+.itn b{display:block;font-size:15.5px;font-weight:700;line-height:1.2}
+.itn small{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.it.done .itn b{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--blue)}
+.due{display:grid;border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.due .eyebrow{margin-bottom:2px}
+.slots{display:flex;flex-wrap:wrap;gap:8px}
+.slots button{padding:10px 13px;border-radius:14px;background:var(--s1);border:2px solid var(--line);font-weight:700;font-size:14px}
+.slots button small{font-size:11px;color:var(--blue);font-weight:800}
+.slots button.on{border-color:var(--blue);background:var(--blue-t);color:var(--blue)}
+.tip{display:flex;gap:10px;align-items:flex-start;background:var(--blue-t);border-radius:14px;padding:12px}
+.tip p{margin:0;font-size:14.5px;line-height:1.4}
+.tgl{background:var(--s1);border-radius:14px;box-shadow:0 1px 0 var(--line)}
+.tslot{flex:none;padding:9px 11px;border-radius:12px;background:var(--blue-t);color:var(--blue);font-size:12.5px;font-weight:800;white-space:nowrap}
+.sheet-body{overflow-x:hidden}
+.stepper{gap:14px}
+.stepper button{width:52px;height:52px}
+.stepper b{font-size:clamp(40px,13vw,60px);font-stretch:115%;min-width:0}

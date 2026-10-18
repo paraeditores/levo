@@ -28,12 +28,24 @@ for (const uid of [...new Set(subs.map(s => s.user_id))]) {
   const prof = (await api(`profile?user_id=eq.${uid}&select=outfit`))[0];
   const cfg = (prof && prof.outfit && prof.outfit.lv2) || {};
   const [wh, wm] = (cfg.wake || "05:00").split(":").map(Number), wake = wh * 60 + wm;
+  const j = ((await api(`journal?user_id=eq.${uid}&day=eq.${today}&select=data`))[0] || {}).data || {};
+  const habits = await api(`habits?user_id=eq.${uid}&active=eq.true&select=id,name`), done = ((await api(`days?user_id=eq.${uid}&day=eq.${today}&select=done`))[0] || {}).done || {};
+  /* Recordatorios que el usuario ha pedido para un hábito o una tarea (fuera del límite de 3 avisos) */
+  if (!FORZAR) {
+    const toM = t => { const [h, m] = String(t).split(":").map(Number); return h * 60 + m }, rem = [];
+    Object.entries(cfg.hslot || {}).forEach(([id, x]) => { const h = habits.find(z => z.id === id); if (h && x && x.r && x.t && !done[id]) rem.push({ key: "h-" + id.slice(0, 40), t: x.t, name: h.name }) });
+    (j.tasks || []).forEach((t, i) => { if (t && t.r && t.tm && t.t && !t.done) rem.push({ key: "t-" + i, t: t.tm, name: t.t }) });
+    for (const r of rem) {
+      const m = toM(r.t); if (nowMin < m || nowMin >= m + 30) continue;
+      const ya = await api(`avisos?user_id=eq.${uid}&day=eq.${today}&slot=eq.${encodeURIComponent(r.key)}&select=slot`); if (ya.length) continue;
+      await send(mine, "Levo", `Es tu momento: ${r.name}.`, r.key);
+      await api("avisos", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ user_id: uid, day: today, slot: r.key }) });
+    }
+  }
   const win = { amanecer: [wake, wake + 90], mediodia: [13 * 60, 15 * 60], examen: [21 * 60, 23 * 60 + 30] };
   let slot = FORZAR || Object.keys(win).find(k => nowMin >= win[k][0] && nowMin < win[k][1]);
   if (!slot) continue;
   if (!FORZAR) { const ya = await api(`avisos?user_id=eq.${uid}&day=eq.${today}&slot=eq.${slot}&select=slot`); if (ya.length) continue }
-  const j = ((await api(`journal?user_id=eq.${uid}&day=eq.${today}&select=data`))[0] || {}).data || {};
-  const habits = await api(`habits?user_id=eq.${uid}&active=eq.true&select=id`), done = ((await api(`days?user_id=eq.${uid}&day=eq.${today}&select=done`))[0] || {}).done || {};
   const hd = habits.filter(h => done[h.id]).length;
   const aff = (j.aff || []).filter(s => s && s.trim()).length, tasks = (j.tasks || []).filter(t => t && t.t && t.t.trim()), meals = ["desayuno", "comida", "cena"].filter(m => j.meals && j.meals[m]).length;
   const examDone = !!(j.exam && (j.exam.bien || j.exam.mejorar || j.exam.gracias));

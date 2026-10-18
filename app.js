@@ -187,6 +187,108 @@ function stepStatus(key) {
     exam: st.exam ? "Día examinado" : "Noche · 3 preguntas",
   }[key];
 }
+/* ================= TU DÍA: el mejor momento para cada cosa ================= */
+const SLOTS = [
+  { id: "despertar", n: "Al despertar", why: "Antes de que el día te arrastre: lo que haces al despertar se cumple casi siempre." },
+  { id: "manana", n: "Mañana", why: "Tu pico de concentración llega 2–4 horas después de despertar. Es el momento para lo difícil." },
+  { id: "mediodia", n: "Mediodía", why: "Después de comer baja la energía: perfecto para caminar o para tareas ligeras." },
+  { id: "tarde", n: "Tarde", why: "Por la tarde el cuerpo rinde más físicamente y es buen momento para recados y llamadas." },
+  { id: "noche", n: "Noche", why: "Toca bajar el ritmo: leer, reflexionar y preparar mañana." },
+];
+const SLOT_DIA = { id: "dia", n: "Todo el día", why: "Repártelo a lo largo del día, un poco cada vez." };
+const slotById = id => SLOTS.find(s => s.id === id) || SLOT_DIA;
+const m2t = m => { const x = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad(Math.floor(x / 60))}:${pad(x % 60)}` };
+function slotRange(id) { const w = toMin(set().wake || "05:00"); return { despertar: [w, w + 60], manana: [w + 60, Math.max(w + 120, 780)], mediodia: [Math.max(w + 120, 780), 960], tarde: [960, 1200], noche: [1200, 1410] }[id] }
+const slotLabel = id => { const r = slotRange(id); return r ? `${m2t(r[0])}–${m2t(r[1])}` : "" };
+const slotTime = id => { const w = toMin(set().wake || "05:00"); return m2t({ despertar: w + 15, manana: w + 120, mediodia: 840, tarde: 1050, noche: 1260 }[id] ?? 720) };
+function currentSlot() { const m = toMin(hhmm()); const s = SLOTS.find(x => { const r = slotRange(x.id); return m >= r[0] && m < r[1] }); return s ? s.id : null }
+const HSLOT_DEF = { leer: "noche", entreno: "manana", frio: "despertar", meditar: "despertar", sinmovil: "despertar", caminar: "mediodia", agua: "dia", sinazucar: "dia", foco: "manana", dormir: "noche", ayudar: "tarde", gratitud: "tarde", gastos: "noche", ahorro: "manana", diario: "noche", estirar: "noche" };
+const SLOT_KEYS = [
+  [/medit|respir|ducha|fr[ií]o|afirma|sin m[oó]vil/i, "despertar"],
+  [/estudi|trabaj|foco|escrib|proyecto|grab|crear|program|dise[nñ]|gui[oó]n|edit|informe|presentaci/i, "manana"],
+  [/entren|gym|gimnas|correr|pesas|deporte|flexi|nadar|yoga|bici|abdomin/i, "manana"],
+  [/camin|pase[oa]|pasos/i, "mediodia"],
+  [/llam|email|correo|recado|compra|reuni|banco|pag[ao]|cita|mensaje/i, "tarde"],
+  [/le[eé]|lectura|libro|gratitud|diario|gasto|estir|dorm|planific|orden/i, "noche"],
+  [/agua|az[uú]car|alcohol|comer|fruta|verdura|prote/i, "dia"],
+];
+function suggestSlot(name, type, idx = 0) { for (const [re, s] of SLOT_KEYS) if (re.test(name || "")) return type === "task" && s === "dia" ? "manana" : s; return type === "task" ? (["manana", "manana", "tarde", "tarde", "mediodia", "noche"][idx] || "tarde") : "manana" }
+const hInfo = h => { const x = (set().hslot || {})[h.id]; if (x) return x; const base = Object.keys(HSLOT_DEF).find(k => h.id === k || h.id.startsWith(k + "-")); return { s: base ? HSLOT_DEF[base] : suggestSlot(h.name, "habit") } };
+function dayItems() {
+  const k = dayKey(0), j = J(), st = steps(k), items = [];
+  items.push({ kind: "routine", r: "manana", s: "despertar", name: "Rutina de la mañana", done: mornCount() >= 5, sub: `${mornCount()} de 5 pasos · 6 min` });
+  items.push({ kind: "routine", r: "dia", s: "mediodia", name: "Check-in rápido", done: !!(st.habits && st.food), sub: "Hábitos y comidas · 30 s" });
+  items.push({ kind: "routine", r: "noche", s: "noche", name: "Rutina de la noche", done: !!(j.closed && st.exam), sub: `${nightCount()} de 4 · 5 min` });
+  S.habits.forEach(h => { const x = hInfo(h); items.push({ kind: "habit", id: h.id, s: x.s, t: x.r ? x.t : null, name: h.name, done: !!doneFor(k)[h.id] }) });
+  (j.tasks || []).forEach((t, i) => { if (t && t.t && t.t.trim()) items.push({ kind: "task", i, s: t.s || suggestSlot(t.t, "task", i), t: t.r ? t.tm : null, name: t.t, done: !!t.done }) });
+  return items;
+}
+const dueNow = () => { const cur = currentSlot(); return cur ? dayItems().filter(x => x.kind !== "routine" && !x.done && x.s === cur).slice(0, 3) : [] };
+function itemHTML(x) {
+  const key = x.kind === "habit" ? "h:" + x.id : x.kind === "task" ? "t:" + x.i : "r:" + x.r;
+  return `<div class="it ${x.done ? "done" : ""} ${x.kind}"><button class="itck" data-ck="${esc(key)}" aria-label="${x.kind === "routine" ? "Abrir" : x.done ? "Desmarcar" : "Marcar como hecho"}">${x.done ? CHK : x.kind === "routine" ? "›" : ""}</button><button class="itn" data-ed="${esc(key)}"><b>${esc(x.name)}</b><small>${x.kind === "routine" ? x.sub : (x.kind === "habit" ? "Hábito" : "Tarea") + (x.t ? " · aviso a las " + x.t : "")}</small></button></div>`;
+}
+function planHTML() {
+  const items = dayItems(), cur = currentSlot(), ci = SLOTS.findIndex(s => s.id === cur);
+  return `<section class="plan"><div class="sec-h"><div><p class="eyebrow b">Tu día</p><h2 class="title">Cada cosa a su hora</h2></div><button class="addbtn" id="addItem">+ Añadir</button></div>
+    <div class="tl">${["dia", ...SLOTS.map(s => s.id)].map(sid => { const its = items.filter(x => x.s === sid); if (!its.length) return ""; const sl = slotById(sid), si = SLOTS.findIndex(s => s.id === sid), isNow = sid === cur, past = si >= 0 && ci >= 0 && si < ci;
+      return `<div class="slot ${isNow ? "now" : ""} ${past ? "past" : ""}"><div class="sl-h"><b>${sl.n}</b><span>${slotLabel(sid)}</span>${isNow ? `<span class="now-pill">Ahora</span>` : ""}</div>${isNow ? `<p class="sl-why">${sl.why}</p>` : ""}${its.map(itemHTML).join("")}</div>` }).join("")}</div></section>`;
+}
+function bindPlan(v) {
+  if ($("addItem")) $("addItem").onclick = () => { SFX.tap(); S.edit = null; S.addType = "task"; openSheet("item") };
+  v.querySelectorAll("[data-ck]").forEach(b => b.onclick = () => {
+    const [t, id] = b.dataset.ck.split(/:(.+)/); if (t === "r") return startFlow(id);
+    const p = snapshot();
+    if (t === "h") { const h = S.habits.find(z => z.id === id), was = !!doneFor(dayKey(0))[id]; if (!h) return; toggleHabit(h); if (!was) { SFX.done(); haptic() } }
+    if (t === "t") { const tk = J().tasks[+id]; tk.done = !tk.done; saveJ(); if (tk.done) { SFX.done(); haptic() } }
+    S.animate = false; renderHoy($("view")); celebrate(p);
+  });
+  v.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => { const [t, id] = b.dataset.ed.split(/:(.+)/); SFX.tap(); if (t === "r") return startFlow(id); S.edit = { t, id }; openSheet("item") });
+}
+function itemSheet(b, f) {
+  const ed = S.edit, isNew = !ed; let type = ed ? (ed.t === "h" ? "habit" : "task") : (S.addType || "task"), name = "", s = null, tm = null, remind = false, manual = false;
+  if (ed && ed.t === "h") { const h = S.habits.find(z => z.id === ed.id); if (h) { name = h.name; const x = hInfo(h); s = x.s; tm = x.t || null; remind = !!x.r; manual = true } }
+  if (ed && ed.t === "t") { const t = J().tasks[+ed.id]; if (t) { name = t.t; s = t.s || suggestSlot(t.t, "task", +ed.id); tm = t.tm || null; remind = !!t.r; manual = true } }
+  const nTasks = () => (J().tasks || []).filter(t => t && t.t && t.t.trim()).length;
+  b.innerHTML = `<h2 class="title">${isNew ? "Añadir" : "Editar"}</h2>${isNew ? `<div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))">${[["task", "Tarea de hoy"], ["habit", "Hábito diario"]].map(([k, n]) => `<button data-ty="${k}" aria-selected="${type === k}">${n}</button>`).join("")}</div>` : `<p class="eyebrow b">${type === "habit" ? "Hábito diario" : "Tarea de hoy"}</p>`}
+    <input id="itname" maxlength="60" value="${esc(name)}" placeholder="${type === "habit" ? "Ej.: 20 flexiones" : "Ej.: Grabar el vídeo"}"><div id="itdyn" style="display:grid;gap:12px"></div>`;
+  const dyn = () => {
+    const sug = suggestSlot(name, type, isNew ? nTasks() : +(ed && ed.id) || 0); if (!manual) s = sug;
+    if (type === "task" && s === "dia") s = sug;
+    const opts = type === "habit" ? [...SLOTS, SLOT_DIA] : SLOTS, sl = slotById(s);
+    $("itdyn").innerHTML = `<p class="eyebrow">El mejor momento</p><div class="slots">${opts.map(o => `<button data-sl="${o.id}" class="${s === o.id ? "on" : ""}">${o.n}${o.id === sug ? " <small>· recomendado</small>" : ""}</button>`).join("")}</div>
+      <div class="tip"><span class="emblem sm">${IC.mentor}</span><p><b>${sl.n}${s !== "dia" ? " · " + slotLabel(s) : ""}.</b> ${sl.why}</p></div>
+      ${s !== "dia" ? `<button class="prow tgl" id="itrem"><span class="tx"><b>Recordármelo a una hora</b><small>Un aviso solo para esto</small></span><span class="sw ${remind ? "on" : ""}"></span></button>${remind ? stepperHTML("ittm", tm || slotTime(s), 15) : ""}` : ""}`;
+    $("itdyn").querySelectorAll("[data-sl]").forEach(x => x.onclick = () => { s = x.dataset.sl; manual = true; if (remind) tm = slotTime(s); SFX.tap(); dyn() });
+    if ($("itrem")) $("itrem").onclick = () => { remind = !remind; if (remind && !tm) tm = slotTime(s); SFX.tap(); haptic(); dyn() };
+    if ($("ittm")) { bindStepper($("itdyn")); $("itdyn").querySelectorAll("[data-for=ittm]").forEach(x => x.addEventListener("click", () => tm = $("ittm").textContent)) }
+  };
+  $("itname").oninput = e => { name = e.target.value; if (!manual) dyn() };
+  b.querySelectorAll("[data-ty]").forEach(x => x.onclick = () => { type = x.dataset.ty; S.addType = type; SFX.tap(); b.querySelectorAll("[data-ty]").forEach(y => y.setAttribute("aria-selected", y.dataset.ty === type)); $("itname").placeholder = type === "habit" ? "Ej.: 20 flexiones" : "Ej.: Grabar el vídeo"; dyn() });
+  dyn(); if (isNew) setTimeout(() => $("itname") && $("itname").focus(), 350);
+  footBtn(f, isNew ? "Añadir" : "Guardar", () => {
+    name = $("itname").value.trim(); if (!name) return toast("Escribe un nombre.");
+    const when = remind ? ($("ittm") ? $("ittm").textContent : tm || slotTime(s)) : null;
+    if (type === "habit") {
+      let id = ed && ed.id;
+      if (!id) { id = name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) + "-" + Date.now().toString(36); S.habits = [...S.habits, { id, name, area: "vida" }]; write(() => sb.from("habits").insert({ id, user_id: S.uid, name, area: "vida", ord: Date.now(), active: true })) }
+      else { const h = S.habits.find(z => z.id === id); if (h && h.name !== name) { h.name = name; write(() => sb.from("habits").update({ name }).eq("id", id)) } }
+      S.set.hslot = { ...(S.set.hslot || {}), [id]: { s, t: when, r: remind } }; saveSet();
+    } else {
+      const j = J();
+      if (ed) Object.assign(j.tasks[+ed.id], { t: name, s, sm: true, tm: when, r: remind });
+      else { j.tasks = (j.tasks || []).filter(t => t && t.t && t.t.trim()); if (j.tasks.length >= 6) return toast("Máximo 6 tareas al día: elige lo importante."); j.tasks.push({ t: name, done: false, s, sm: true, tm: when, r: remind }) }
+      saveJ();
+    }
+    SFX.done(); haptic(); toast(isNew ? `Añadido: ${slotById(s).n.toLowerCase()}${when ? " · aviso a las " + when : ""}` : "Guardado"); closeSheet();
+  });
+  if (!isNew) footBtn(f, "Eliminar", () => {
+    if (type === "habit") { const id = ed.id; S.habits = S.habits.filter(h => h.id !== id); write(() => sb.from("habits").update({ active: false }).eq("id", id)); const hs = { ...(S.set.hslot || {}) }; delete hs[id]; S.set.hslot = hs; saveSet() }
+    else { J().tasks.splice(+ed.id, 1); saveJ() }
+    SFX.tap(); toast("Eliminado"); closeSheet();
+  }, "btn ghost");
+}
+
 const hasTasks = () => (J().tasks || []).some(t => t && t.t && t.t.trim());
 const mornCount = () => { const st = steps(dayKey(0)); return [st.wake, st.breath, st.frase, st.aff, hasTasks()].filter(Boolean).length };
 const nightCount = () => { const st = steps(dayKey(0)); return [st.habits, st.food, st.exam, !!J().closed].filter(Boolean).length };
@@ -199,10 +301,11 @@ function nowCard() {
 }
 function renderHoy(v) {
   const c = nowCard();
-  v.innerHTML = heroHTML() + `<section class="card now"><p class="eyebrow b">${c.ey}</p><h2 class="now-t">${c.t}</h2><p class="sub">${c.s}</p>${c.b ? `<button class="btn" id="goNow">${c.b}</button>` : ""}<p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${mentorLine()}</span></p></section>
+  v.innerHTML = heroHTML() + `<section class="card now"><p class="eyebrow b">${c.ey}</p><h2 class="now-t">${c.t}</h2><p class="sub">${c.s}</p>${c.b ? `<button class="btn" id="goNow">${c.b}</button>` : ""}<p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${mentorLine()}</span></p>${dueNow().length ? `<div class="due"><p class="eyebrow b">Es tu mejor momento para</p>${dueNow().map(itemHTML).join("")}</div>` : ""}</section>${planHTML()}
     <div class="sec-h"><div><p class="eyebrow b">Tu camino de hoy</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:52%;font-size:14px">Toca un paso para hacerlo. Con 6, el día queda esculpido.</p></div><div class="trail" id="trail"></div>`;
   $("help").onclick = () => { SFX.tap(); openSheet("guide") };
   if ($("goNow")) $("goNow").onclick = () => startFlow(c.r);
+  bindPlan(v);
   drawTrail();
   countUps(v); tilt(v.querySelector(".hero"));
 }
@@ -329,12 +432,14 @@ const STEPUI = {
     nav.skip();
   },
   m_tasks(c, nav) {
-    const j = J(); j.tasks = j.tasks || [{ t: "", done: false }, { t: "", done: false }, { t: "", done: false }];
+    const j = J(); j.tasks = j.tasks || []; while (j.tasks.length < 3) j.tasks.push({ t: "", done: false });
+    const ids = SLOTS.map(s => s.id), sOf = (t, i) => t.s || suggestSlot(t.t, "task", i);
     c.classList.add("top");
-    c.innerHTML = `<p class="fl-eyebrow">Tus 3 tareas</p><h2 class="fl-title">Si solo hicieras tres cosas hoy, ¿cuáles serían?</h2><div class="fields">${j.tasks.map((t, i) => `<input id="tk${i}" placeholder="Tarea ${i + 1}" value="${esc(t.t)}">`).join("")}</div>${MLINE("Elige lo que de verdad mueve tu vida. Esta noche marcarás cuáles cumpliste.")}`;
+    c.innerHTML = `<p class="fl-eyebrow">Tus 3 tareas</p><h2 class="fl-title">Si solo hicieras tres cosas hoy, ¿cuáles serían?</h2><div class="fields">${j.tasks.map((t, i) => `<div class="task"><input id="tk${i}" placeholder="Tarea ${i + 1}" value="${esc(t.t)}"><button class="tslot" data-ts="${i}" aria-label="Cambiar el momento">${slotById(sOf(t, i)).n}</button></div>`).join("")}</div>${MLINE("Te sugiero el mejor momento para cada una: lo difícil, por la mañana, cuando tu concentración está en lo más alto. Toca el momento para cambiarlo.")}`;
+    c.querySelectorAll("[data-ts]").forEach(x => x.onclick = () => { const i = +x.dataset.ts, t = j.tasks[i]; t.s = ids[(ids.indexOf(sOf(t, i)) + 1) % ids.length]; t.sm = true; x.textContent = slotById(t.s).n; saveJ(); SFX.tap(); haptic() });
     const b = nav.primary("", () => { won("Tareas elegidas"); nextStep() });
     const upd = () => { const n = j.tasks.filter(t => t.t.trim()).length; b.disabled = n < 1; b.textContent = n ? "Guardar" : "Escribe al menos una" };
-    j.tasks.forEach((t, i) => $("tk" + i).oninput = e => { j.tasks[i].t = e.target.value; saveJ(); upd() }); upd(); nav.skip();
+    j.tasks.forEach((t, i) => $("tk" + i).oninput = e => { t.t = e.target.value; if (!t.sm) { t.s = suggestSlot(t.t, "task", i); c.querySelector(`[data-ts="${i}"]`).textContent = slotById(t.s).n } saveJ(); upd() }); upd(); nav.skip();
   },
   m_end(c, nav) {
     c.innerHTML = `<div class="fl-statue">${myStatue()}</div><h2 class="fl-title center">Mañana ganada</h2><p class="sub center">Durante el día, marca tus hábitos y comidas. Esta noche, 5 minutos para cerrar el día.</p>`;
@@ -455,16 +560,10 @@ function openSheet(key) {
 const footBtn = (f, label, fn, cls = "btn") => { const b = document.createElement("button"); b.className = cls; b.textContent = label; b.onclick = fn; f.append(b); return b };
 const SHEETS = {
   habits(b, f) {
-    const draw = () => {
-      const k = dayKey(0);
-      b.innerHTML = `<h2 class="title">Tus hábitos</h2><p class="sub">Añade o quita hábitos. Puedes marcarlos aquí o en tus rutinas.</p>
-        <div class="fields">${S.habits.map(h => `<button class="hab ${doneFor(k)[h.id] ? "on" : ""}" data-h="${h.id}"><span class="ck ${doneFor(k)[h.id] ? "on" : ""}">✓</span><span>${esc(h.name)}</span><span class="rm" data-rm="${h.id}" role="button" aria-label="Quitar">Quitar</span></button>`).join("") || `<p class="sub">Aún no tienes hábitos.</p>`}</div>
-        <div class="task"><input id="newHab" placeholder="Nuevo hábito (ej.: 20 flexiones)"><button class="link" id="addHab">Añadir</button></div>`;
-      b.querySelectorAll("[data-h]").forEach(x => x.onclick = e => { if (e.target.dataset.rm) return; const h = S.habits.find(z => z.id === x.dataset.h), was = doneFor(dayKey(0))[h.id]; toggleHabit(h); if (!was) { SFX.done(); haptic() } draw() });
-      b.querySelectorAll("[data-rm]").forEach(x => x.onclick = e => { e.stopPropagation(); const id = x.dataset.rm; S.habits = S.habits.filter(h => h.id !== id); write(() => sb.from("habits").update({ active: false }).eq("id", id)); draw() });
-      $("addHab").onclick = () => { const name = $("newHab").value.trim(); if (!name) return; const id = name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").slice(0, 30) + "-" + Date.now().toString(36); S.habits = [...S.habits, { id, name, area: "vida" }]; write(() => sb.from("habits").insert({ id, user_id: S.uid, name, area: "vida", ord: Date.now(), active: true })); draw() };
-    };
-    draw(); footBtn(f, "Listo", closeSheet);
+    b.innerHTML = `<h2 class="title">Tus hábitos</h2><p class="sub">Cada uno con su mejor momento. Toca uno para cambiarlo o borrarlo.</p><div class="fields">${S.habits.map(h => { const x = hInfo(h); return `<button class="hab" data-he="${esc(h.id)}"><span>${esc(h.name)}</span><small style="flex:none;color:var(--blue);font-weight:700">${slotById(x.s).n}${x.r && x.t ? " · " + x.t : ""}</small></button>` }).join("") || `<p class="sub">Aún no tienes hábitos.</p>`}</div>`;
+    b.querySelectorAll("[data-he]").forEach(x => x.onclick = () => { SFX.tap(); S.edit = { t: "h", id: x.dataset.he }; openSheet("item") });
+    footBtn(f, "Añadir hábito", () => { S.edit = null; S.addType = "habit"; openSheet("item") });
+    footBtn(f, "Cerrar", closeSheet, "btn ghost");
   },
   guide(b, f) {
     b.innerHTML = `<p class="eyebrow b">Cómo funciona Levo</p><h2 class="title">Tu mentor de disciplina</h2><p class="sub">Durante 100 días esculpes a la persona que quieres ser. Cada día, un golpe de cincel.</p>
@@ -501,6 +600,7 @@ const SHEETS = {
     footBtn(f, "Guardar", () => { const h = parseFloat($("bh").value) || null, kg = parseFloat(($("bw").value || "").replace(",", ".")) || null; S.bodyP = { height_cm: h, weight_kg: kg, goal: $("bg").value }; write(() => sb.from("body_profile").upsert({ user_id: S.uid, ...S.bodyP, updated_at: new Date().toISOString() }, { onConflict: "user_id" })); if (kg) { const k = dayKey(0); S.weighs = S.weighs.filter(x => x.day !== k).concat([{ day: k, kg }]); write(() => sb.from("weighins").upsert({ user_id: S.uid, day: k, kg }, { onConflict: "user_id,day" })) } toast("Guardado."); closeSheet() });
   },
 };
+SHEETS.item = itemSheet;
 SHEETS.library = (b, f) => { renderMentor(b); footBtn(f, "Cerrar", closeSheet) };
 SHEETS.share = (b, f) => {
   let kind = "story", blob = null, url = "";
