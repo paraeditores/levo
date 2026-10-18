@@ -10,7 +10,7 @@ const api = async (path, opt = {}) => {
   if (!r.ok) throw new Error(`${path}: ${r.status} ${await r.text()}`);
   return r.status === 204 ? null : r.json().catch(() => null);
 };
-const { fraseSellada } = new Function(fs.readFileSync(new URL("../content.js", import.meta.url), "utf8") + ";return { fraseSellada };")();
+const { fraseSellada, leccion } = new Function(fs.readFileSync(new URL("../content.js", import.meta.url), "utf8") + ";return { fraseSellada, leccion };")();
 const send = async (subs, title, body, tag) => { for (const s of subs) { try { await webpush.sendNotification(s.sub, JSON.stringify({ title, body, tag })); console.log("Enviado:", body.slice(0, 80)) } catch (e) { console.log("Fallo push:", e.statusCode); if (e.statusCode === 404 || e.statusCode === 410) await api(`push_subs?endpoint=eq.${encodeURIComponent(s.endpoint)}`, { method: "DELETE" }) } } };
 
 /* Toques entre amigos (si los hay) */
@@ -41,7 +41,7 @@ for (const uid of [...new Set(subs.map(s => s.user_id))]) {
   const n = steps.filter(Boolean).length, f = fraseSellada(today);
   let body;
   if (slot === "prueba") body = "Aviso de prueba: si lees esto, los avisos funcionan.";
-  else if (slot === "amanecer") { if (j.open) continue; body = `Tu frase de hoy está sellada. Es de ${f.a}, y trae una acción para ti.` }
+  else if (slot === "amanecer") { if (j.open) continue; const dn = cfg.start ? Math.max(1, Math.round((new Date(today + "T12:00") - new Date(cfg.start + "T12:00")) / 864e5) + 1) : 1; body = `Tu frase de hoy está sellada: es de ${f.a}. Tu mentor te espera con la lección ${dn}, «${leccion(dn).t}».` }
   else if (slot === "mediodia") { if (n >= 3) continue; body = `Tu camino va por la piedra ${["I", "II", "III"][n] || "I"} de VIII. Un paso más y tu estatua lo nota.` }
   else { if (examDone) continue; body = n >= 5 ? "Te queda el examen: tres preguntas y tu día queda esculpido." : "Antes de dormir, tu examen: tres preguntas, un minuto."; }
   await send(mine, "Levo", body.length > 180 ? body.slice(0, 177) + "…" : body, slot);

@@ -70,6 +70,10 @@ const HABITOS_ESTOICOS = [
   { id: "dormir", name: "Dormir antes de las 22:30", area: "cuerpo" },
   { id: "ayudar", name: "Ayudar a alguien", area: "vida" },
   { id: "gratitud", name: "Llamar a alguien querido", area: "vida" },
+  { id: "gastos", name: "Apuntar mis gastos", area: "dinero" },
+  { id: "ahorro", name: "Apartar algo para ahorrar", area: "dinero" },
+  { id: "diario", name: "Escribir una página de diario", area: "sentido" },
+  { id: "estirar", name: "Estirar 10 minutos", area: "cuerpo" },
 ];
 /* La frase del día: la misma para todo el día, distinta cada día */
 function fraseDelDia(k) { const d = new Date(k + "T12:00:00"), n = Math.floor(d.getTime() / 864e5); return FRASES[((n % FRASES.length) + FRASES.length) % FRASES.length] }
@@ -108,3 +112,50 @@ function fraseSellada(k) {
   const L = m === 0 ? FRASES_EXITO : FRASES, i = ((Math.floor(n / 2) % L.length) + L.length) % L.length, f = L[i];
   return m === 0 ? { id: "e" + i, t: f.t, a: f.a, acc: f.acc } : { id: "s" + i, t: f.t, a: f.a, acc: PRACTICAS[f.p].hoy, prac: f.p };
 }
+
+/* Lo que quieres transformar: cada área sugiere sus hábitos */
+const AREAS = [
+  { id: "cuerpo", n: "Cuerpo y salud", d: "Energía, forma física y descanso", h: ["entreno", "caminar", "agua", "sinazucar", "dormir", "frio", "estirar"] },
+  { id: "mente", n: "Mente y calma", d: "Foco, claridad y menos ansiedad", h: ["meditar", "sinmovil", "leer", "diario"] },
+  { id: "trabajo", n: "Trabajo y propósito", d: "Crear, avanzar y construir", h: ["foco", "leer", "sinmovil"] },
+  { id: "dinero", n: "Dinero", d: "Orden, ahorro y libertad", h: ["gastos", "ahorro"] },
+  { id: "relaciones", n: "Relaciones", d: "Familia, pareja y amigos", h: ["gratitud", "ayudar"] },
+  { id: "sentido", n: "Sentido", d: "Quién eres y para qué estás aquí", h: ["diario", "meditar", "ayudar"] },
+];
+const PORQUES = ["Para tener energía para los que quiero", "Para dejar de aplazar mi vida", "Para demostrarme que puedo", "Para construir lo que sueño", "Para estar en paz conmigo"];
+const QUIENES = ["se levanta sin negociar", "cumple lo que se promete", "cuida su cuerpo como un templo", "mantiene la calma ante todo", "termina lo que empieza"];
+/* Tu mentor: una lección por día de camino (las de los hitos, en su día) */
+const LECCIONES = [
+  { t: "El primer golpe", x: "Toda estatua empieza igual: un bloque sin forma y alguien que decide empezar. Hoy no buscas la perfección, buscas el primer golpe.", q: "¿Qué te ha hecho empezar hoy?" },
+  { t: "Votos por quien eliges ser", x: "Cada acción pequeña es un voto por la persona que quieres ser. No necesitas unanimidad: necesitas mayoría. Hoy, vota.", q: "¿Qué voto vas a emitir hoy?" },
+  { t: "Por qué madrugar", x: "Las 5:00 no son una hora mágica: son la hora sin interrupciones. Quien gana la primera hora llega al día con ventaja, no con prisa.", q: "¿Qué harás mañana con tu primera hora?" },
+  { t: "Disciplina antes que ganas", x: "La motivación es el clima: cambia cada día. La disciplina es el refugio que construyes para cuando llueve.", q: "¿Qué harás hoy aunque no tengas ganas?" },
+  { t: "Lo que depende de ti", x: "Epicteto separaba lo que controlas de lo que no. Tu energía se pierde en lo segundo y se multiplica en lo primero.", q: "¿Qué te preocupa que no depende de ti?" },
+  { t: "Pequeño y diario", x: "Mejorar un poco cada día parece nada. En un año eres otra persona. El escultor no rompe la piedra de un golpe: la convence.", q: "¿Cuál es tu pequeña mejora de hoy?" },
+  { t: "La forma aparece", x: "Una semana. Lo que antes era esfuerzo empieza a ser costumbre. No celebres el resultado: celebra que has vuelto cada día.", q: "¿Qué ha cambiado en ti esta semana?" },
+  { t: "Nunca dos veces", x: "Fallar un día es humano. Fallar dos seguidos es el comienzo de un hábito nuevo. La regla: si caes, el día siguiente es sagrado.", q: "¿Qué harás la próxima vez que falles?" },
+  { t: "Tu entorno te esculpe", x: "Es más fácil cambiar el lugar que la fuerza de voluntad. Deja el libro en la almohada y el móvil fuera de la habitación.", q: "¿Qué cambiarás hoy de tu entorno?" },
+  { t: "Empieza en dos minutos", x: "Si cuesta empezar, haz la versión mínima: una página, una flexión, una línea. Empezar es casi todo el trabajo.", q: "¿Cuál es la versión mínima de tu tarea más difícil?" },
+  { t: "Tu voz interior", x: "Hablas contigo más que con nadie. Si un amigo te hablara como tú te hablas, ¿seguiría siendo tu amigo?", q: "¿Qué frase te repites que no te ayuda?" },
+  { t: "El examen de Séneca", x: "Cada noche Séneca repasaba su día sin castigarse: qué hizo bien y qué pudo hacer mejor. Lo que se mira, mejora.", q: "¿Qué aprendiste ayer?" },
+  { t: "Incomodidad elegida", x: "Quien elige pequeñas incomodidades no se rompe ante las grandes. Una ducha fría es un entrenamiento para la vida.", q: "¿Qué incomodidad elegirás hoy?" },
+  { t: "El rostro", x: "Dos semanas: tu carácter empieza a tener cara. Ya no eres alguien que lo intenta; eres alguien que lo hace.", q: "¿Cómo te describirías hoy en una frase?" },
+  { t: "Memento mori", x: "Recordar que el tiempo se acaba no es triste: ordena las prioridades. Lo urgente grita; lo importante espera en silencio.", q: "Si este fuera tu último año, ¿qué dejarías de hacer?" },
+  { t: "El cuerpo es tu casa", x: "Tu mente vive en tu cuerpo. Dormir, moverte y comer bien no es vanidad: es cuidar la casa donde vives.", q: "¿Qué necesita hoy tu cuerpo?" },
+  { t: "Trabajo profundo", x: "Una hora sin interrupciones vale más que un día de distracciones. Tu atención es tu materia prima.", q: "¿Cuándo será hoy tu hora sin móvil?" },
+  { t: "La paciencia del bambú", x: "El bambú pasa años echando raíces antes de crecer en pocas semanas. Lo que no ves también está creciendo.", q: "¿Qué progreso invisible estás haciendo?" },
+  { t: "Amor fati", x: "No eliges todo lo que te pasa, pero sí qué haces con ello. Lo que se interpone en el camino se convierte en el camino.", q: "¿Qué obstáculo te está enseñando algo?" },
+  { t: "La comparación roba", x: "Comparas tu día 20 con el día 1.000 de otro. La única comparación justa es con quien eras ayer.", q: "¿En qué eres mejor que hace un mes?" },
+  { t: "El poder del no", x: "Cada sí es un no a otra cosa. Proteger tu tiempo también es disciplina.", q: "¿A qué vas a decir que no esta semana?" },
+  { t: "Gratitud", x: "Agradecer no es conformarse: es ver lo que ya tienes para construir desde ahí y no desde la carencia.", q: "¿Qué tres cosas agradeces hoy?" },
+  { t: "El miedo es una brújula", x: "Lo que temes suele señalar hacia donde tienes que crecer. No esperes a no tener miedo: hazlo con miedo.", q: "¿Qué estás evitando por miedo?" },
+  { t: "Servir a otros", x: "Para los estoicos nadie se perfecciona solo. Ayudar a alguien también te esculpe a ti.", q: "¿A quién puedes ayudar hoy?" },
+  { t: "El silencio", x: "Quien escucha aprende; quien habla de más se dispersa. Diez minutos de silencio ordenan lo que el ruido revuelve.", q: "¿Cuándo tendrás hoy diez minutos de silencio?" },
+  { t: "Aprendiz para siempre", x: "Nadie puede aprender lo que cree que ya sabe. El aprendiz eterno nunca deja de crecer.", q: "¿Qué quieres aprender este mes?" },
+  { t: "Celebra el camino", x: "No esperes al final para reconocerte. Cada día cumplido es una victoria real, aunque nadie la vea.", q: "¿Qué te vas a reconocer hoy?" },
+  { t: "Encadenar hábitos", x: "Une lo nuevo a lo que ya haces: después del café, leo; después de lavarme los dientes, afirmo.", q: "¿A qué hábito puedes unir uno nuevo?" },
+  { t: "Las recaídas", x: "Volverás a caer. La diferencia no está en no caer, sino en cuánto tardas en levantarte. Hazlo rápido y sin drama.", q: "¿Cómo te hablarás cuando caigas?" },
+  { t: "Los detalles", x: "Un mes. La piedra ya tiene forma; ahora toca afinar. Los grandes cambios viven en los pequeños detalles.", q: "¿Qué detalle vas a pulir este mes?" },
+];
+const HITOS = { 60: { t: "El pulido", x: "Dos meses. La figura ya está libre del bloque. Ahora el trabajo es sostener: brillar no es hacer más, es no dejar de hacer.", q: "¿Qué hábito ya forma parte de ti?" }, 100: { t: "Laureado", x: "Cien días. No has cambiado de vida de golpe: la has esculpido golpe a golpe. Lo que eres ahora lo construiste tú.", q: "¿Quién eres hoy que no eras hace cien días?" } };
+const leccion = n => HITOS[n] || LECCIONES[(Math.max(1, n) - 1) % LECCIONES.length];
