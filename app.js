@@ -102,7 +102,7 @@ async function load() {
   if (!busy()) route();
 }
 function bootCache() { try { const c = JSON.parse(localStorage.getItem("levo2-cache") || "null"); if (c) { Object.assign(S, c, { ready: true }); route() } } catch (e) { } }
-const busy = () => $("sheet") || document.querySelector(".moment") || (document.querySelector(".onb") && renderOnb.o && renderOnb.o.step > 0);
+const busy = () => $("sheet") || $("flow") || document.querySelector(".moment") || (document.querySelector(".onb") && renderOnb.o && renderOnb.o.step > 0);
 
 /* ---------- iconos de línea ---------- */
 const IC = {
@@ -124,7 +124,7 @@ const IC = {
 const CHK = IC.check.replace("<svg", '<svg width="20" height="20" style="fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"');
 
 /* ---------- navegación ---------- */
-const TABS = [["hoy", "Hoy"], ["mentor", "Mentor"], ["estatua", "Estatua"], ["perfil", "Perfil"]];
+const TABS = [["hoy", "Hoy"], ["estatua", "Estatua"], ["perfil", "Perfil"]];
 function route() {
   const app = $("app");
   if (!S.uid && !DEMO) return renderGate(app);
@@ -137,7 +137,8 @@ function renderMain(app) {
   app.querySelectorAll("[data-tab]").forEach(b => { b.setAttribute("aria-selected", b.dataset.tab === S.tab); b.onclick = () => { if (S.tab !== b.dataset.tab) SFX.tap(); S.tab = b.dataset.tab; window.scrollTo(0, 0); renderMain(app) } });
   const v = $("view"); v.className = "wrap";
   S.animate = S.lastTab !== S.tab; S.lastTab = S.tab;
-  ({ hoy: renderHoy, mentor: renderMentor, estatua: renderEstatua, perfil: renderPerfil })[S.tab](v);
+  if (!TABS.some(t => t[0] === S.tab)) S.tab = "hoy";
+  ({ hoy: renderHoy, estatua: renderEstatua, perfil: renderPerfil })[S.tab](v);
   if (S.animate) { v.classList.add("anim"); [...v.children].forEach((c, i) => { c.classList.add("rise"); c.style.setProperty("--i", Math.min(i, 8)) }) } else v.classList.remove("anim");
 }
 
@@ -172,53 +173,46 @@ function mentorLine() {
   const s = streak(); if (s >= 3) return `Llevas ${s} días seguidos. La disciplina ya trabaja para ti: no la dejes sola hoy.`;
   const next = ORDER.find(x => !st[x]); return `Tu siguiente paso: ${NAME[next].toLowerCase()}. Pequeño y ahora.`;
 }
-function fraseHTML() {
-  const j = J(), q = fq();
-  if (!j.open) return `<section class="card frase" id="frase"><div class="sealrow"><span class="seal" id="sealIc">${IC.laurel}</span><div><p class="eyebrow b">Frase del día · sellada</p><h3>Hoy te espera una frase de ${esc(q.a)}</h3></div></div><p class="sub">Trae una acción para ti. Solo se abre una vez al día.</p><button class="btn" id="openSeal">Romper el sello</button></section>`;
-  let h = `<section class="card frase" id="frase"><p class="eyebrow b">Frase del día</p><p class="quote">${esc(q.t)}</p><p class="who">${esc(q.a)}</p><div class="accbox"><p class="eyebrow">Tu acción de hoy</p><p>${esc(q.acc)}</p></div>`;
-  if (!j.commit) h += `<button class="holdbtn" id="hold"><span class="fill"></span><span class="lbl">Mantén pulsado para comprometerte</span></button><p class="holdhint">Es tu firma: un compromiso contigo. Siente el latido.</p>`;
-  else if (!j.practiced) h += `<p class="okline">${CHK} Comprometido</p><button class="btn ghost" id="didIt">Ya hice mi acción</button>`;
-  else h += `<p class="okline">${CHK} Acción hecha. Palabra cumplida.</p>`;
-  return h + `</section>`;
-}
 function stepStatus(key) {
   const k = dayKey(0), j = J(), st = steps(k), tgt = set().wake || "05:00";
   const aff = (j.aff || []).filter(s => s && s.trim()).length, tasks = (j.tasks || []).filter(t => t && t.t && t.t.trim()), td = tasks.filter(t => t.done).length, meals = ["desayuno", "comida", "cena"].filter(m => j.meals && j.meals[m]).length, hd = S.habits.filter(h => doneFor(k)[h.id]).length;
   return {
-    wake: j.wake ? `En pie a las ${j.wake}` : `Levántate a las ${tgt}`,
-    frase: st.frase ? (j.practiced ? "Acción hecha" : "Comprometido") : j.open ? "Comprométete con su acción" : "Ábrela y comprométete",
-    breath: st.breath ? "Un minuto de calma" : "1 minuto guiado",
-    aff: st.aff ? "3 de 3 escritas" : aff ? `${aff} de 3 escritas` : "Escribe quién eliges ser",
-    tasks: tasks.length ? `${td} de ${tasks.length} hechas` : "Elige tus 3 tareas clave",
+    wake: j.wake ? `En pie a las ${j.wake}` : `Mañana · a las ${tgt}`,
+    frase: st.frase ? (j.practiced ? "Acción hecha" : "Comprometido") : j.open ? "Comprométete con su acción" : "Mañana · ábrela",
+    breath: st.breath ? "Un minuto de calma" : "Mañana · 1 minuto",
+    aff: st.aff ? "3 de 3 escritas" : aff ? `${aff} de 3 escritas` : "Mañana · 3 frases",
+    tasks: tasks.length ? `${td} de ${tasks.length} hechas` : "Mañana · elige 3",
     habits: S.habits.length ? `${hd} de ${S.habits.length} hechos` : "Añade tus hábitos",
     food: `${meals} de 3 comidas · ${j.water || 0} vasos`,
-    exam: st.exam ? "Día examinado" : "3 preguntas antes de dormir",
+    exam: st.exam ? "Día examinado" : "Noche · 3 preguntas",
   }[key];
 }
+const hasTasks = () => (J().tasks || []).some(t => t && t.t && t.t.trim());
+const mornCount = () => { const st = steps(dayKey(0)); return [st.wake, st.breath, st.frase, st.aff, hasTasks()].filter(Boolean).length };
+const nightCount = () => { const st = steps(dayKey(0)); return [st.habits, st.food, st.exam, !!J().closed].filter(Boolean).length };
+function nowCard() {
+  const k = dayKey(0), hr = new Date().getHours(), mc = mornCount(), nc = nightCount(), closed = J().closed && steps(k).exam;
+  if (closed) return { r: null, ey: "Hoy", t: "Día cerrado", s: isRitual(k) ? "Has esculpido tu estatua. Descansa." : "Mañana es un día nuevo.", b: "" };
+  if (mc < 5 && hr < 16) return { r: "manana", ey: "Ahora", t: "Rutina de la mañana", s: `${mc} de 5 pasos · unos 6 minutos`, b: mc ? "Continuar" : "Empezar" };
+  if (hr >= 19) return { r: "noche", ey: "Ahora", t: "Rutina de la noche", s: `${nc ? nc + " de 4 · " : ""}Cierra el día en 5 minutos`, b: nc ? "Continuar" : "Empezar" };
+  return { r: "dia", ey: "Durante el día", t: "Check-in rápido", s: "Marca tus hábitos y comidas en 30 segundos. Desde las 19:00, tu rutina de noche.", b: "Hacer check-in" };
+}
 function renderHoy(v) {
-  const L = leccion(dayNum());
-  v.innerHTML = heroHTML() + `<button class="card mentor" id="mentorCard"><span class="emblem">${IC.mentor}</span><span><p class="eyebrow">Tu mentor</p><p class="ml">${mentorLine()}</p><span class="les">${J().lesson ? "✓ " : ""}Lección ${dayNum()}: ${esc(L.t)} →</span></span></button>` + fraseHTML()
-    + `<div class="sec-h"><div><p class="eyebrow b">Tu camino de hoy</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:50%;font-size:14px">Toca un paso para hacerlo. Con 6, el día cuenta.</p></div><div class="trail" id="trail"></div>`;
+  const c = nowCard();
+  v.innerHTML = heroHTML() + `<section class="card now"><p class="eyebrow b">${c.ey}</p><h2 class="now-t">${c.t}</h2><p class="sub">${c.s}</p>${c.b ? `<button class="btn" id="goNow">${c.b}</button>` : ""}<p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${mentorLine()}</span></p></section>
+    <div class="sec-h"><div><p class="eyebrow b">Tu camino de hoy</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:52%;font-size:14px">Toca un paso para hacerlo. Con 6, el día queda esculpido.</p></div><div class="trail" id="trail"></div>`;
   $("help").onclick = () => { SFX.tap(); openSheet("guide") };
-  $("mentorCard").onclick = () => { SFX.tap(); S.tab = "mentor"; window.scrollTo(0, 0); renderMain($("app")) };
-  bindFrase();
+  if ($("goNow")) $("goNow").onclick = () => startFlow(c.r);
   drawTrail();
   countUps(v); tilt(v.querySelector(".hero"));
 }
-function bindFrase() {
-  if ($("openSeal")) $("openSeal").onclick = () => {
-    SFX.seal(); haptic(2); const ic = $("sealIc"); if (ic) { ic.classList.add("opening"); const w = document.createElement("span"); w.className = "shock"; ic.parentElement.style.position = "relative"; ic.parentElement.append(w) }
-    setTimeout(() => { J().open = true; saveJ(); $("frase").outerHTML = fraseHTML(); bindFrase(); $("frase").animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 500, easing: "ease-out" }) }, 520);
-  };
-  if ($("hold")) bindHold($("hold"), 1700, () => { const p = snapshot(); J().commit = true; saveJ(); renderHoy($("view")); celebrate(p, "Compromiso firmado") });
-  if ($("didIt")) $("didIt").onclick = () => { J().practiced = true; saveJ(); SFX.done(); haptic(); toast("Acción hecha. Así se cumple la palabra."); $("frase").outerHTML = fraseHTML(); bindFrase() };
-}
+const NODE_GO = { wake: () => ["manana", "m_wake"], frase: () => ["manana", "m_frase"], breath: () => ["manana", "m_breath"], aff: () => ["manana", "m_aff"], tasks: () => hasTasks() ? ["noche", "n_tasks"] : ["manana", "m_tasks"], habits: () => new Date().getHours() >= 19 ? ["noche", "n_habits"] : ["dia", "n_habits"], food: () => new Date().getHours() >= 19 ? ["noche", "n_food"] : ["dia", "n_food"], exam: () => ["noche", "n_bien"] };
 /* El sendero: nodos que serpentean de izquierda a derecha y bajan hacia la meta */
 const XS = [.22, .62, .8, .42, .2, .6, .78, .4];
 function drawTrail() {
   const t = $("trail"); if (!t) return;
   const W = t.clientWidth || 375, gap = 108, y0 = 58, k = dayKey(0), st = steps(k), now = ORDER.findIndex(x => !st[x]);
-  const P = XS.map((x, i) => [x * W, y0 + i * gap]), goal = [W * .5, y0 + 8 * gap + 6], all = [...P, goal], H = goal[1] + 150;
+  const P = XS.map((x, i) => [x * W, y0 + i * gap]), goal = [W * .5, y0 + 8 * gap + 6], all = [...P, goal], H = goal[1] + 160;
   t.style.height = H + "px";
   const seg = (a, b) => `M${a[0]} ${a[1]}C${a[0]} ${a[1] + gap * .55} ${b[0]} ${b[1] - gap * .55} ${b[0]} ${b[1]}`;
   let svg = "", chev = "";
@@ -236,9 +230,171 @@ function drawTrail() {
   });
   html += `<div class="goal" style="left:${goal[0]}px;top:${goal[1] - 20}px"><div class="gm">${myStatue()}</div><p>${isRitual(k) ? "Hoy ya has esculpido" : "Con 6 pasos, tu estatua avanza"}${nextPiece() ? `<br><span style="color:var(--blue)">Próxima pieza: ${esc(nextPiece().n)} en ${nextPiece().d - sculpted()} ${nextPiece().d - sculpted() === 1 ? "día" : "días"}</span>` : ""}</p></div>`;
   t.innerHTML = html;
-  t.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { SFX.tap(); const key = b.dataset.step; if (key === "frase") { const f = $("frase"); f.scrollIntoView({ behavior: "smooth", block: "center" }); f.animate([{ boxShadow: "0 0 0 4px var(--blue)" }, { boxShadow: "0 0 0 0 transparent" }], { duration: 1400 }) } else openSheet(key) });
+  t.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { const [r, at] = NODE_GO[b.dataset.step](); startFlow(r, at) });
 }
-addEventListener("resize", () => { if (S.tab === "hoy") drawTrail() });
+addEventListener("resize", () => { if (S.tab === "hoy" && !$("flow")) drawTrail() });
+
+/* ================= RUTINAS PASO A PASO ================= */
+const ROUT = {
+  manana: { name: "Rutina de la mañana", steps: ["m_wake", "m_breath", "m_frase", "m_aff", "m_tasks", "m_end"] },
+  noche: { name: "Rutina de la noche", steps: ["n_tasks", "n_habits", "n_food", "n_action", "n_bien", "n_mejorar", "n_gracias", "n_lesson", "n_tomorrow", "n_end"] },
+  dia: { name: "Check-in del día", steps: ["n_habits", "n_food", "d_end"] },
+};
+const FL = { r: null, list: [], i: 0, snap: null, iv: 0 };
+function startFlow(r, at) {
+  const j = J(); let list = [...ROUT[r].steps];
+  if (r === "noche") { if (!j.open) list = list.filter(s => s !== "n_action"); if (!hasTasks()) list = list.filter(s => s !== "n_tasks") }
+  FL.r = r; FL.list = list; FL.i = Math.max(0, at ? list.indexOf(at) : 0); FL.snap = snapshot();
+  document.body.classList.add("noscroll");
+  let el = $("flow"); if (!el) { el = document.createElement("div"); el.id = "flow"; el.className = "flow"; el.setAttribute("role", "dialog"); document.body.append(el) }
+  el.innerHTML = `<div class="fl-top"><div class="fl-prog" id="flprog"></div><button class="x" id="flx" aria-label="Cerrar">×</button></div><p class="fl-label" id="fllab"></p><div class="fl-stage" id="flstage"></div><div class="fl-foot" id="flfoot"></div>`;
+  $("flx").onclick = () => { SFX.tap(); endFlow() };
+  SFX.tap(); renderStep();
+}
+function endFlow() { clearInterval(FL.iv); const el = $("flow"); if (el) el.remove(); document.body.classList.remove("noscroll"); const p = FL.snap; FL.snap = null; route(); if (p && S.tab === "hoy") setTimeout(() => celebrate(p, null, true), 150) }
+function nextStep() { clearInterval(FL.iv); if (FL.i >= FL.list.length - 1) return endFlow(); FL.i++; renderStep() }
+function renderStep() {
+  const id = FL.list[FL.i], real = FL.list.filter(s => !s.endsWith("_end")), ri = real.indexOf(id);
+  $("flprog").innerHTML = real.map((_, k) => `<i class="${ri < 0 || k < ri ? "on" : k === ri ? "cur" : ""}"></i>`).join("");
+  $("fllab").textContent = ri >= 0 ? `${ROUT[FL.r].name} · ${ri + 1} de ${real.length}` : ROUT[FL.r].name;
+  const stage = $("flstage"), old = stage.querySelector(".fl-card:not(.out)");
+  if (old) { old.classList.add("out"); setTimeout(() => old.remove(), 360) }
+  const card = document.createElement("div"); card.className = "fl-card"; stage.append(card);
+  const foot = $("flfoot"); foot.innerHTML = "";
+  const nav = {
+    primary: (label, fn, cls = "btn") => { const b = document.createElement("button"); b.className = cls; b.textContent = label; b.onclick = () => { SFX.tap(); fn() }; foot.append(b); return b },
+    skip: (label = "Saltar este paso") => { const b = document.createElement("button"); b.className = "link center"; b.textContent = label; b.onclick = () => { SFX.tap(); nextStep() }; foot.append(b); return b },
+    hold: (label, fn) => { foot.insertAdjacentHTML("afterbegin", `<button class="holdbtn" id="flhold"><span class="fill"></span><span class="lbl">${label}</span></button>`); bindHold($("flhold"), 1700, fn) },
+  };
+  STEPUI[id](card, nav);
+}
+const MLINE = t => `<p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${t}</span></p>`;
+const addMin = (t, m) => { const x = ((toMin(t) + m) % 1440 + 1440) % 1440; return `${pad(Math.floor(x / 60))}:${pad(x % 60)}` };
+const stepperHTML = (id, val, step) => `<div class="stepper"><button data-st="${-step}" data-for="${id}" aria-label="Antes">−</button><b id="${id}">${val}</b><button data-st="${step}" data-for="${id}" aria-label="Después">+</button></div>`;
+const bindStepper = root => root.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { const el = $(b.dataset.for); el.textContent = addMin(el.textContent, +b.dataset.st); SFX.tap(); haptic() });
+const roundNow = () => addMin(hhmm(), -(toMin(hhmm()) % 5));
+const won = word => { SFX.chisel(); haptic(2); toast(word) };
+const examStep = (key, n, title, line) => (c, nav) => {
+  const j = J(); j.exam = j.exam || {};
+  c.innerHTML = `<p class="fl-eyebrow">Examen nocturno · ${n} de 3</p><h2 class="fl-title">${title}</h2><textarea id="ex" rows="4" placeholder="Escribe con sinceridad…">${esc(j.exam[key] || "")}</textarea>${MLINE(line)}`;
+  $("ex").oninput = e => { j.exam[key] = e.target.value; saveJ() };
+  nav.primary("Siguiente", nextStep); nav.skip();
+};
+const STEPUI = {
+  m_wake(c, nav) {
+    const j = J(), tgt = set().wake || "05:00";
+    c.innerHTML = `<p class="fl-eyebrow">Despertar · tu objetivo: ${tgt}</p><p class="fl-clock" id="flclk">${hhmm()}</p><h2 class="fl-title">${j.wake ? `En pie a las ${j.wake}. Bien hecho.` : "¿A qué hora te has levantado?"}</h2>${j.wake ? "" : stepperHTML("wkt", roundNow(), 5)}${MLINE("La primera victoria del día es levantarte a la primera. Lo demás viene después.")}`;
+    FL.iv = setInterval(() => { const e = $("flclk"); if (e) e.textContent = hhmm() }, 1000);
+    if (j.wake) return nav.primary("Continuar", nextStep);
+    bindStepper(c);
+    nav.primary("Me he levantado", () => { j.wake = $("wkt").textContent; saveJ(); won(toMin(j.wake) <= toMin(tgt) + 15 ? "En pie. Primera victoria." : "En pie. Mañana, a tu hora."); nextStep() });
+  },
+  m_breath(c, nav) {
+    const j = J(); let state = j.breath ? "done" : "idle", t0 = 0, lastI = -1;
+    c.innerHTML = `<p class="fl-eyebrow">Respirar · 1 minuto</p><div class="breath"><span class="ringb"></span><span class="orb" id="orb"></span><div><b id="ph">${j.breath ? "Hecho" : "Prepárate"}</b><small id="cd">${j.breath ? "Mente en calma" : "4 · 4 · 4 · 4"}</small></div></div><h2 class="fl-title center">Respira en caja</h2>${MLINE("Cuatro segundos al inhalar, cuatro sosteniendo, cuatro al soltar y cuatro en pausa. La calma también se entrena.")}`;
+    const phases = [["Inhala", 1.9], ["Mantén", 1.9], ["Exhala", 1], ["Pausa", 1]];
+    const b = nav.primary(j.breath ? "Continuar" : "Empezar", () => {
+      if (state !== "idle") return nextStep();
+      state = "run"; t0 = Date.now(); b.textContent = "Respirando…"; b.disabled = true;
+      FL.iv = setInterval(() => {
+        const el = (Date.now() - t0) / 1000, left = Math.max(0, 64 - el), i = Math.floor(el / 4) % 4;
+        if (i !== lastI && left > 0) { lastI = i; tone([392, 523, 330, 262][i], 1.2, { v: .05 }); haptic() }
+        $("ph").textContent = left <= 0 ? "Hecho" : phases[i][0]; $("cd").textContent = left <= 0 ? "Mente en calma" : `${Math.ceil(left)} s`; $("orb").style.transform = `scale(${left <= 0 ? 1.4 : phases[i][1]})`;
+        if (left <= 0) { clearInterval(FL.iv); state = "done"; j.breath = true; saveJ(); SFX.done(); haptic(2); b.disabled = false; b.textContent = "Continuar" }
+      }, 200);
+    });
+    if (!j.breath) nav.skip();
+  },
+  m_frase(c, nav) {
+    const j = J(), q = fq();
+    if (!j.open) {
+      c.innerHTML = `<p class="fl-eyebrow">Tu frase del día</p><div class="bigseal" id="bseal">${IC.laurel}</div><h2 class="fl-title center">Tu frase de hoy está sellada</h2><p class="sub center">Es de ${esc(q.a)} y trae una acción para ti. Solo se abre una vez al día.</p>`;
+      return nav.primary("Romper el sello", () => { SFX.seal(); haptic(2); const s = $("bseal"); s.classList.add("opening"); s.insertAdjacentHTML("afterend", '<span class="shock big"></span>'); setTimeout(() => { j.open = true; saveJ(); renderStep() }, 650) });
+    }
+    c.classList.add("top");
+    c.innerHTML = `<p class="fl-eyebrow">Tu frase del día</p><p class="fl-quote">«${esc(q.t)}»</p><p class="who">${esc(q.a)}</p><div class="accbox"><p class="eyebrow">Tu acción de hoy</p><p>${esc(q.acc)}</p></div>${MLINE("Leer no cambia nada; comprometerse, sí. Esta noche te preguntaré si la hiciste.")}`;
+    if (j.commit) return nav.primary("Continuar", nextStep);
+    nav.hold("Mantén pulsado para comprometerte", () => { j.commit = true; saveJ(); won("Compromiso firmado"); nextStep() });
+  },
+  m_aff(c, nav) {
+    const j = J(); j.aff = j.aff || ["", "", ""]; const prev = (S.journal[dayKey(-1)] || {}).aff;
+    c.classList.add("top");
+    c.innerHTML = `<p class="fl-eyebrow">Afirmaciones</p><h2 class="fl-title">¿Quién eliges ser hoy?</h2><p class="sub">Tres frases en presente, como si ya lo fueras.</p><div class="fields">${[0, 1, 2].map(i => `<textarea id="af${i}" rows="2" placeholder="${["Yo soy…", "Hoy elijo…", "Me comprometo a…"][i]}">${esc(j.aff[i] || "")}</textarea>`).join("")}</div><div class="sugs">${AFIRMACIONES.slice(0, 4).map(a => `<button data-a="${esc(a)}">${esc(a)}</button>`).join("")}</div>`;
+    const b = nav.primary("", () => { won("Afirmaciones escritas"); nextStep() });
+    const upd = () => { const n = j.aff.filter(s => s && s.trim()).length; b.disabled = n < 3; b.textContent = n < 3 ? `Escribe ${3 - n} más` : "Guardar" };
+    [0, 1, 2].forEach(i => $("af" + i).oninput = e => { j.aff[i] = e.target.value; saveJ(); upd() });
+    c.querySelectorAll("[data-a]").forEach(x => x.onclick = () => { const i = j.aff.findIndex(s => !s || !s.trim()); if (i < 0) return; SFX.tap(); j.aff[i] = x.dataset.a; $("af" + i).value = x.dataset.a; saveJ(); upd() });
+    upd();
+    if (prev && prev.filter(s => s && s.trim()).length >= 3 && b.disabled) nav.primary("Usar las de ayer", () => { j.aff = [...prev]; saveJ(); won("Afirmaciones escritas"); nextStep() }, "btn ghost");
+    nav.skip();
+  },
+  m_tasks(c, nav) {
+    const j = J(); j.tasks = j.tasks || [{ t: "", done: false }, { t: "", done: false }, { t: "", done: false }];
+    c.classList.add("top");
+    c.innerHTML = `<p class="fl-eyebrow">Tus 3 tareas</p><h2 class="fl-title">Si solo hicieras tres cosas hoy, ¿cuáles serían?</h2><div class="fields">${j.tasks.map((t, i) => `<input id="tk${i}" placeholder="Tarea ${i + 1}" value="${esc(t.t)}">`).join("")}</div>${MLINE("Elige lo que de verdad mueve tu vida. Esta noche marcarás cuáles cumpliste.")}`;
+    const b = nav.primary("", () => { won("Tareas elegidas"); nextStep() });
+    const upd = () => { const n = j.tasks.filter(t => t.t.trim()).length; b.disabled = n < 1; b.textContent = n ? "Guardar" : "Escribe al menos una" };
+    j.tasks.forEach((t, i) => $("tk" + i).oninput = e => { j.tasks[i].t = e.target.value; saveJ(); upd() }); upd(); nav.skip();
+  },
+  m_end(c, nav) {
+    c.innerHTML = `<div class="fl-statue">${myStatue()}</div><h2 class="fl-title center">Mañana ganada</h2><p class="sub center">Durante el día, marca tus hábitos y comidas. Esta noche, 5 minutos para cerrar el día.</p>`;
+    SFX.done(); haptic(2); nav.primary("Ir a mi día", endFlow);
+  },
+  n_tasks(c, nav) {
+    const j = J(), tasks = j.tasks.map((t, i) => ({ ...t, i })).filter(t => t.t && t.t.trim());
+    c.classList.add("top");
+    c.innerHTML = `<p class="fl-eyebrow">Tus tareas</p><h2 class="fl-title">¿Cuáles has terminado?</h2><div class="fields">${tasks.map(t => `<button class="chk ${t.done ? "on" : ""}" data-t="${t.i}"><span class="ck ${t.done ? "on" : ""}">✓</span><span>${esc(t.t)}</span></button>`).join("")}</div>${MLINE("Con 2 de 3 cuenta el paso. Lo que no terminaste, mañana tiene otra oportunidad.")}`;
+    c.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { const t = j.tasks[+x.dataset.t]; t.done = !t.done; saveJ(); x.classList.toggle("on", t.done); x.querySelector(".ck").classList.toggle("on", t.done); if (t.done) { SFX.done(); haptic() } });
+    nav.primary("Continuar", nextStep);
+  },
+  n_habits(c, nav) {
+    const k = dayKey(0);
+    c.classList.add("top");
+    c.innerHTML = `<p class="fl-eyebrow">Hábitos</p><h2 class="fl-title">¿Qué hábitos has cumplido hoy?</h2><div class="fields">${S.habits.map(h => `<button class="chk ${doneFor(k)[h.id] ? "on" : ""}" data-h="${h.id}"><span class="ck ${doneFor(k)[h.id] ? "on" : ""}">✓</span><span>${esc(h.name)}</span></button>`).join("") || `<p class="sub">Aún no tienes hábitos. Añádelos en Perfil.</p>`}</div>${MLINE("Somos lo que hacemos cada día. Con el 60 % cuenta el paso.")}`;
+    c.querySelectorAll("[data-h]").forEach(x => x.onclick = () => { const h = S.habits.find(z => z.id === x.dataset.h), was = !!doneFor(k)[h.id]; toggleHabit(h); x.classList.toggle("on", !was); x.querySelector(".ck").classList.toggle("on", !was); if (!was) { SFX.done(); haptic() } });
+    nav.primary("Continuar", nextStep);
+  },
+  n_food(c, nav) {
+    const j = J(); j.meals = j.meals || {}; c.classList.add("top");
+    const draw = () => {
+      const goal = waterGoal(), w = j.water || 0;
+      c.innerHTML = `<p class="fl-eyebrow">Comidas y agua</p><h2 class="fl-title">¿Cómo has comido hoy?</h2>${["desayuno", "comida", "cena"].map(m => `<div class="meal"><b>${m}</b><div class="seg3">${[["limpio", "Limpio"], ["regular", "Regular"], ["exceso", "Me pasé"]].map(([k, n]) => `<button data-m="${m}" data-v="${k}" class="${j.meals[m] === k ? "on" : ""}">${n}</button>`).join("")}</div></div>`).join("")}<div class="water"><div><p class="eyebrow">Agua</p><div class="n">${w}<span> de ${goal} vasos</span></div><div class="glasses">${Array.from({ length: goal }, (_, i) => `<i class="${i < w ? "on" : ""}"></i>`).join("")}</div></div><div class="pm"><button id="wm" aria-label="Quitar un vaso">−</button><button id="wp" aria-label="Añadir un vaso">+</button></div></div>`;
+      c.querySelectorAll("[data-m]").forEach(x => x.onclick = () => { SFX.tap(); j.meals[x.dataset.m] = j.meals[x.dataset.m] === x.dataset.v ? undefined : x.dataset.v; saveJ(); draw() });
+      $("wp").onclick = () => { tone(880 + (j.water || 0) * 40, .12, { v: .05 }); haptic(); j.water = (j.water || 0) + 1; saveJ(); draw() }; $("wm").onclick = () => { j.water = Math.max(0, (j.water || 0) - 1); saveJ(); draw() };
+    };
+    draw(); nav.primary("Continuar", nextStep);
+  },
+  n_action(c, nav) {
+    const j = J(), q = fq();
+    c.innerHTML = `<p class="fl-eyebrow">Tu acción de hoy</p><h2 class="fl-title">¿La hiciste?</h2><div class="accbox"><p>${esc(q.acc)}</p></div>${MLINE("Cumplir tu palabra contigo es la base de la confianza en ti mismo.")}`;
+    nav.primary("Sí, la hice", () => { j.practiced = true; j.commit = true; saveJ(); won("Palabra cumplida"); nextStep() });
+    nav.primary("Todavía no", () => { j.practiced = false; saveJ(); nextStep() }, "btn ghost");
+  },
+  n_bien: examStep("bien", 1, "¿Qué has hecho bien hoy?", "Séneca repasaba su día cada noche, sin castigarse. Empieza por lo bueno."),
+  n_mejorar: examStep("mejorar", 2, "¿Qué puedes mejorar?", "No es culpa: es información. Lo que se mira, mejora."),
+  n_gracias: examStep("gracias", 3, "¿Qué agradeces hoy?", "Agradecer entrena la mirada para ver lo que ya tienes."),
+  n_lesson(c, nav) {
+    const j = J(), d = dayNum(), L = leccion(d);
+    c.classList.add("top");
+    c.innerHTML = `<p class="fl-eyebrow">Lección de tu mentor · ${d} de 100</p><h2 class="fl-title">${esc(L.t)}</h2><p class="fl-lesson">${esc(L.x)}</p><p class="fl-q">${esc(L.q)}</p><textarea id="rf" rows="3" placeholder="Tu respuesta (opcional, solo la ves tú)">${esc(j.reflex || "")}</textarea>`;
+    $("rf").oninput = e => { j.reflex = e.target.value; saveJ() };
+    nav.primary("Completar la lección", () => { if ((j.reflex || "").trim()) { j.lesson = true; saveJ() } SFX.done(); haptic(); nextStep() });
+  },
+  n_tomorrow(c, nav) {
+    c.innerHTML = `<p class="fl-eyebrow">Prepara mañana</p><h2 class="fl-title center">Mañana te levantas a las</h2>${stepperHTML("tmw", set().wake || "05:00", 15)}<ul class="tips"><li>Deja el móvil lejos de la cama.</li><li>Prepara tu ropa y un vaso de agua.</li><li>Duerme al menos 7 horas.</li></ul>`;
+    bindStepper(c);
+    nav.primary("Buenas noches", () => { const w = $("tmw").textContent; if (w !== (set().wake || "05:00")) { S.set.wake = w; saveSet() } J().closed = true; saveJ(); nextStep() });
+  },
+  n_end(c, nav) {
+    const rit = isRitual(dayKey(0));
+    c.innerHTML = `<div class="fl-statue">${myStatue()}</div><h2 class="fl-title center">Buenas noches${set().name ? ", " + esc(set().name) : ""}</h2><p class="sub center">${rit ? "Hoy has esculpido tu estatua. Descansa: mañana seguimos." : "Hoy no llegaste a 6 pasos. No pasa nada: mañana es sagrado."}</p>`;
+    SFX.done(); nav.primary("Cerrar el día", endFlow);
+  },
+  d_end(c, nav) {
+    c.innerHTML = `<div class="fl-statue">${myStatue()}</div><h2 class="fl-title center">Check-in hecho</h2><p class="sub center">Desde las 19:00, tu rutina de noche: 5 minutos para cerrar el día.</p>`;
+    SFX.done(); nav.primary("Volver a mi día", endFlow);
+  },
+};
 
 /* Mantener pulsado: el latido se acelera mientras se llena */
 function bindHold(btn, ms, onDone) {
@@ -264,9 +420,9 @@ function burst(el, big) {
   }
   el.animate([{ transform: "translateX(0)" }, { transform: "translateX(-4px) rotate(-1deg)" }, { transform: "translateX(3px) rotate(1deg)" }, { transform: "translateX(0)" }], { duration: 320 });
 }
-function celebrate(p, label) {
+function celebrate(p, label, quiet) {
   const now = snapshot(), newly = ORDER.filter(k => !p.st[k] && now.st[k]);
-  if (newly.length) { SFX.chisel(); haptic(2); setTimeout(() => burst($("stage")), 60); toast(`${label || NAME[newly[newly.length - 1]] + ": hecho"} · ${now.n} de 8`) }
+  if (newly.length && !quiet) { SFX.chisel(); haptic(2); setTimeout(() => burst($("stage")), 60); toast(`${label || NAME[newly[newly.length - 1]] + ": hecho"} · ${now.n} de 8`) }
   const fN = faseDe(now.sc), fP = faseDe(p.sc);
   const q = [];
   if (fN.i > fP.i) q.push({ big: "Nueva forma", title: fN.name, text: fN.txt });
@@ -286,11 +442,11 @@ function moment({ big, title, text, btn = "Seguir", days = sculpted(), onClose, 
 
 /* ---------- hojas: un paso cada vez ---------- */
 let pending = null;
-function closeSheet() { const s = $("sheet"); if (s) s.remove(); document.body.classList.remove("lock"); clearInterval(openSheet._iv); const p = pending; pending = null; route(); if (p && S.tab === "hoy") setTimeout(() => celebrate(p), 150) }
+function closeSheet() { const s = $("sheet"); if (s) s.remove(); document.body.classList.remove("noscroll"); clearInterval(openSheet._iv); const p = pending; pending = null; route(); if (p && S.tab === "hoy") setTimeout(() => celebrate(p), 150) }
 function openSheet(key) {
   if (!pending && ORDER.includes(key)) pending = snapshot();
   let s = $("sheet"); if (!s) { s = document.createElement("div"); s.id = "sheet"; s.className = "sheet"; s.setAttribute("role", "dialog"); document.body.append(s) }
-  document.body.classList.add("lock"); clearInterval(openSheet._iv);
+  document.body.classList.add("noscroll"); clearInterval(openSheet._iv);
   const i = ORDER.indexOf(key);
   s.innerHTML = `<div class="sheet-in"><div class="sheet-head"><p class="eyebrow b">${i >= 0 ? `Paso ${i + 1} de 8` : ""}</p><button class="x" id="sx" aria-label="Cerrar">×</button></div><div class="sheet-body" id="sb"></div><div class="sheet-foot" id="sf"></div></div>`;
   $("sx").onclick = () => { SFX.tap(); closeSheet() };
@@ -298,51 +454,10 @@ function openSheet(key) {
 }
 const footBtn = (f, label, fn, cls = "btn") => { const b = document.createElement("button"); b.className = cls; b.textContent = label; b.onclick = fn; f.append(b); return b };
 const SHEETS = {
-  wake(b, f) {
-    const j = J(), tgt = set().wake || "05:00";
-    b.classList.add("middle");
-    b.innerHTML = `<p class="eyebrow">Tu objetivo: ${tgt}</p><p class="big-time" id="clk"></p><p class="sub" style="max-width:30ch">«Al amanecer, cuando te cueste levantarte, ten presente: me levanto para hacer el trabajo de un ser humano.» — Marco Aurelio</p>
-      <label class="fields" style="width:100%;max-width:280px;margin-top:8px"><span>${j.wake ? "Hora a la que te levantaste" : "¿Te levantaste antes? Corrige la hora"}</span><input id="wt" type="time" value="${j.wake || hhmm()}"></label>`;
-    const tick = () => { const c = $("clk"); if (c) c.textContent = hhmm() }; tick(); openSheet._iv = setInterval(tick, 1000);
-    footBtn(f, j.wake ? "Guardar" : "Me he levantado", () => { j.wake = $("wt").value || hhmm(); saveJ(); closeSheet() });
-  },
-  breath(b, f) {
-    const j = J(); b.classList.add("middle");
-    b.innerHTML = `<h2 class="title">Respirar</h2><p class="sub">Respiración en caja: 4 segundos al inhalar, 4 manteniendo, 4 al exhalar y 4 en pausa.</p><div class="breath"><span class="ringb"></span><span class="orb" id="orb"></span><div><b id="ph">Prepárate</b><small id="cd">60 s</small></div></div>`;
-    const phases = [["Inhala", 1.9], ["Mantén", 1.9], ["Exhala", 1], ["Pausa", 1]]; let t0 = null, done = false, lastI = -1;
-    const btn = footBtn(f, "Empezar", () => { if (done) return closeSheet(); t0 = Date.now(); btn.textContent = "Respirando…"; btn.disabled = true; skip.textContent = "Terminar antes" });
-    const skip = footBtn(f, "Cerrar", () => { if (t0 && Date.now() - t0 > 30e3) { j.breath = true; saveJ() } closeSheet() }, "btn ghost");
-    openSheet._iv = setInterval(() => {
-      if (!t0) return; const el = (Date.now() - t0) / 1000, left = Math.max(0, 64 - el), i = Math.floor(el / 4) % 4;
-      if (i !== lastI && left > 0) { lastI = i; tone([392, 523, 330, 262][i], 1.2, { v: .05 }); haptic() }
-      $("ph").textContent = left <= 0 ? "Hecho" : phases[i][0]; $("cd").textContent = left <= 0 ? "Mente en calma" : `${Math.ceil(left)} s`; $("orb").style.transform = `scale(${left <= 0 ? 1.4 : phases[i][1]})`;
-      if (left <= 0 && !done) { done = true; j.breath = true; saveJ(); SFX.done(); btn.disabled = false; btn.textContent = "Listo"; skip.hidden = true; clearInterval(openSheet._iv) }
-    }, 200);
-  },
-  aff(b, f) {
-    const j = J(); j.aff = j.aff || ["", "", ""]; const prev = S.journal[dayKey(-1)] && S.journal[dayKey(-1)].aff;
-    const ph = ["Yo soy…", "Hoy elijo…", "Me comprometo a…"];
-    b.innerHTML = `<h2 class="title">¿Quién eliges ser hoy?</h2><p class="sub">Escribe tres frases en presente, como si ya fueras esa persona. Escribirlas cada mañana es la práctica.</p>
-      <div class="fields">${[0, 1, 2].map(i => `<textarea id="af${i}" rows="2" placeholder="${ph[i]}">${esc(j.aff[i] || "")}</textarea>`).join("")}</div>
-      ${prev && prev.some(Boolean) ? `<button class="link" id="prevAff" style="text-align:left">Usar las de ayer</button>` : ""}
-      <p class="eyebrow">Ideas</p><div class="sugs">${AFIRMACIONES.slice(0, 6).map(a => `<button data-a="${esc(a)}">${esc(a)}</button>`).join("")}</div>`;
-    [0, 1, 2].forEach(i => $("af" + i).oninput = e => { j.aff[i] = e.target.value; saveJ() });
-    b.querySelectorAll("[data-a]").forEach(x => x.onclick = () => { const i = j.aff.findIndex(s => !s || !s.trim()); if (i < 0) return; SFX.tap(); j.aff[i] = x.dataset.a; $("af" + i).value = x.dataset.a; saveJ() });
-    if ($("prevAff")) $("prevAff").onclick = () => { j.aff = [...prev]; [0, 1, 2].forEach(i => $("af" + i).value = j.aff[i] || ""); saveJ() };
-    footBtn(f, "Guardar", closeSheet);
-  },
-  tasks(b, f) {
-    const j = J(); j.tasks = j.tasks || [{ t: "", done: false }, { t: "", done: false }, { t: "", done: false }];
-    b.innerHTML = `<h2 class="title">Tus 3 tareas clave</h2><p class="sub">Si solo hicieras tres cosas hoy, ¿cuáles moverían tu vida? Márcalas al terminarlas: con 2 de 3 cuenta el paso.</p>
-      <div class="fields">${j.tasks.map((t, i) => `<div class="task"><button class="ck ${t.done ? "on" : ""}" data-ck="${i}" aria-label="Hecha">✓</button><input id="tk${i}" placeholder="Tarea ${i + 1}" value="${esc(t.t)}"></div>`).join("")}</div>`;
-    j.tasks.forEach((t, i) => $("tk" + i).oninput = e => { j.tasks[i].t = e.target.value; saveJ() });
-    b.querySelectorAll("[data-ck]").forEach(x => x.onclick = () => { const t = j.tasks[+x.dataset.ck]; if (!t.t.trim()) return toast("Escribe primero la tarea."); t.done = !t.done; if (t.done) { SFX.done(); haptic() } x.classList.toggle("on", t.done); saveJ() });
-    footBtn(f, "Listo", closeSheet);
-  },
   habits(b, f) {
     const draw = () => {
       const k = dayKey(0);
-      b.innerHTML = `<h2 class="title">Tus hábitos</h2><p class="sub">Marca los que cumplas hoy. Con el 60 % cuenta el paso.</p>
+      b.innerHTML = `<h2 class="title">Tus hábitos</h2><p class="sub">Añade o quita hábitos. Puedes marcarlos aquí o en tus rutinas.</p>
         <div class="fields">${S.habits.map(h => `<button class="hab ${doneFor(k)[h.id] ? "on" : ""}" data-h="${h.id}"><span class="ck ${doneFor(k)[h.id] ? "on" : ""}">✓</span><span>${esc(h.name)}</span><span class="rm" data-rm="${h.id}" role="button" aria-label="Quitar">Quitar</span></button>`).join("") || `<p class="sub">Aún no tienes hábitos.</p>`}</div>
         <div class="task"><input id="newHab" placeholder="Nuevo hábito (ej.: 20 flexiones)"><button class="link" id="addHab">Añadir</button></div>`;
       b.querySelectorAll("[data-h]").forEach(x => x.onclick = e => { if (e.target.dataset.rm) return; const h = S.habits.find(z => z.id === x.dataset.h), was = doneFor(dayKey(0))[h.id]; toggleHabit(h); if (!was) { SFX.done(); haptic() } draw() });
@@ -351,32 +466,12 @@ const SHEETS = {
     };
     draw(); footBtn(f, "Listo", closeSheet);
   },
-  food(b, f) {
-    const j = J(); j.meals = j.meals || {};
-    const draw = () => {
-      const goal = waterGoal(), w = j.water || 0;
-      b.innerHTML = `<h2 class="title">Comidas y agua</h2><p class="sub">Sin contar calorías: con honestidad. Apunta las tres comidas para cumplir el paso.</p>
-        ${["desayuno", "comida", "cena"].map(m => `<div class="meal"><b>${m}</b><div class="seg3">${[["limpio", "Limpio"], ["regular", "Regular"], ["exceso", "Me pasé"]].map(([k, n]) => `<button data-m="${m}" data-v="${k}" class="${j.meals[m] === k ? "on" : ""}">${n}</button>`).join("")}</div></div>`).join("")}
-        <div class="water"><div><p class="eyebrow">Agua</p><div class="n">${w}<span> de ${goal} vasos</span></div><div class="glasses">${Array.from({ length: goal }, (_, i) => `<i class="${i < w ? "on" : ""}"></i>`).join("")}</div></div><div class="pm"><button id="wm" aria-label="Quitar un vaso">−</button><button id="wp" aria-label="Añadir un vaso">+</button></div></div>`;
-      b.querySelectorAll("[data-m]").forEach(x => x.onclick = () => { SFX.tap(); j.meals[x.dataset.m] = j.meals[x.dataset.m] === x.dataset.v ? undefined : x.dataset.v; saveJ(); draw() });
-      $("wp").onclick = () => { tone(880 + (j.water || 0) * 40, .12, { v: .05 }); haptic(); j.water = (j.water || 0) + 1; saveJ(); draw() }; $("wm").onclick = () => { j.water = Math.max(0, (j.water || 0) - 1); saveJ(); draw() };
-    };
-    draw(); footBtn(f, "Listo", closeSheet);
-  },
-  exam(b, f) {
-    const j = J(); j.exam = j.exam || {}; const q = fq();
-    b.innerHTML = `<h2 class="title">Examen nocturno</h2><p class="sub">«Cada noche examinaré mi día.» — Séneca. Sin castigarte: mira, aprende y suelta.</p>
-      ${j.open ? `<div class="card" style="display:grid;gap:10px"><p class="eyebrow b">Tu acción de hoy</p><p style="margin:0">${esc(q.acc)}</p><div class="seg3" style="grid-template-columns:1fr 1fr"><button id="py" class="${j.practiced ? "on" : ""}">La hice</button><button id="pn" class="${j.practiced === false ? "on" : ""}">Todavía no</button></div></div>` : ""}
-      <div class="fields"><label>¿Qué hice bien?<textarea id="e1" rows="2">${esc(j.exam.bien || "")}</textarea></label><label>¿Qué puedo mejorar?<textarea id="e2" rows="2">${esc(j.exam.mejorar || "")}</textarea></label><label>¿Qué agradezco?<textarea id="e3" rows="2">${esc(j.exam.gracias || "")}</textarea></label></div>`;
-    if ($("py")) { $("py").onclick = () => { j.practiced = true; j.commit = true; saveJ(); SFX.done(); $("py").classList.add("on"); $("pn").classList.remove("on") }; $("pn").onclick = () => { j.practiced = false; saveJ(); $("pn").classList.add("on"); $("py").classList.remove("on") } }
-    [["e1", "bien"], ["e2", "mejorar"], ["e3", "gracias"]].forEach(([id, k]) => $(id).oninput = e => { j.exam[k] = e.target.value; saveJ() });
-    footBtn(f, "Cerrar el día", closeSheet);
-  },
   guide(b, f) {
     b.innerHTML = `<p class="eyebrow b">Cómo funciona Levo</p><h2 class="title">Tu mentor de disciplina</h2><p class="sub">Durante 100 días esculpes a la persona que quieres ser. Cada día, un golpe de cincel.</p>
-      <div class="card" style="display:grid;gap:10px"><p class="eyebrow">Cada día</p><div class="steps8">${ORDER.map((k, i) => `<div><b>${i + 1}</b><span>${NAME[k]}</span></div>`).join("")}</div><p class="sub">Con 6 de 8 pasos el día queda <b>esculpido</b> y tu estatua sale un poco más del bloque. Toca cada paso en «Tu camino de hoy» para hacerlo.</p></div>
-      <div class="card" style="display:grid;gap:8px"><p class="eyebrow">Tu estatua</p><p class="sub">Empieza siendo un bloque de mármol. Con los días esculpidos va saliendo la figura: la cabeza, el rostro, el cuerpo, los detalles, el pulido y, a los 100 días, el laurel.</p></div>
-      <div class="card" style="display:grid;gap:8px"><p class="eyebrow">La frase sellada y tu mentor</p><p class="sub">Cada mañana se abre una frase de un gran autor con una acción para ese día; te comprometes manteniendo pulsado el botón. Tu mentor te deja una lección diaria y te habla según cómo vas.</p></div>
+      <div class="card guide"><b>1</b><div><h3>Rutina de la mañana · 6 min</h3><p class="sub">Despertar, respirar, abrir tu frase sellada y comprometerte con su acción, tus afirmaciones y tus 3 tareas.</p></div></div>
+      <div class="card guide"><b>2</b><div><h3>Durante el día · 30 s</h3><p class="sub">Un check-in rápido para marcar hábitos, comidas y agua.</p></div></div>
+      <div class="card guide"><b>3</b><div><h3>Rutina de la noche · 5 min</h3><p class="sub">Cierra tus tareas, examina tu día con tres preguntas, recibe la lección de tu mentor y prepara mañana.</p></div></div>
+      <div class="card guide"><b>4</b><div><h3>Tu estatua</h3><p class="sub">Con 6 de los 8 pasos el día queda esculpido: la figura sale un poco más del bloque. Cada cierto número de días ganas una pieza para tu galería.</p></div></div>
       <div class="card whys">${WHYS.map(([t, x], i) => `<div><b>0${i + 1}</b><div><h3>${t}</h3><p>${x}</p></div></div>`).join("")}</div>`;
     footBtn(f, "Entendido", closeSheet);
   },
@@ -406,6 +501,7 @@ const SHEETS = {
     footBtn(f, "Guardar", () => { const h = parseFloat($("bh").value) || null, kg = parseFloat(($("bw").value || "").replace(",", ".")) || null; S.bodyP = { height_cm: h, weight_kg: kg, goal: $("bg").value }; write(() => sb.from("body_profile").upsert({ user_id: S.uid, ...S.bodyP, updated_at: new Date().toISOString() }, { onConflict: "user_id" })); if (kg) { const k = dayKey(0); S.weighs = S.weighs.filter(x => x.day !== k).concat([{ day: k, kg }]); write(() => sb.from("weighins").upsert({ user_id: S.uid, day: k, kg }, { onConflict: "user_id,day" })) } toast("Guardado."); closeSheet() });
   },
 };
+SHEETS.library = (b, f) => { renderMentor(b); footBtn(f, "Cerrar", closeSheet) };
 SHEETS.share = (b, f) => {
   let kind = "story", blob = null, url = "";
   const shareText = `Día ${dayNum()} de 100 esculpiendo mi mejor versión con Levo.`;
@@ -472,7 +568,7 @@ function galleryHTML() {
   return `<section class="gal"><div class="sec-h"><div><p class="eyebrow b">Tu galería</p><h2 class="title">Colección</h2></div><p class="galcount"><b>${got}</b>/${GALERIA.length}</p></div>
     <p class="sub">Cada cierto número de días esculpidos ganas una pieza nueva para tu galería. Las oscuras aún te esperan.</p>
     ${nx ? `<button class="card galnext" data-pc="${GALERIA.indexOf(nx)}"><div class="gpic locked">${pieceSVG(nx)}</div><div style="flex:1;min-width:0"><p class="eyebrow b">Próxima pieza</p><h3>${esc(nx.n)}</h3><p class="sub" style="font-size:14px">Faltan ${nx.d - n} ${nx.d - n === 1 ? "día esculpido" : "días esculpidos"}</p><div class="bar"><b style="width:${Math.round((n - from) / (nx.d - from) * 100)}%"></b></div></div></button>` : `<p class="sub"><b style="color:var(--fg)">Colección completa.</b> Eres leyenda.</p>`}
-    <div class="galgrid">${GALERIA.map((p, i) => `<button class="gcard ${n >= p.d ? "got" : "locked"}" data-pc="${i}"><div class="gpic">${pieceSVG(p)}${n >= p.d ? "" : `<span class="lock">${p.d}</span>`}</div><b>${esc(p.n)}</b></button>`).join("")}</div></section>`;
+    <div class="galgrid">${GALERIA.map((p, i) => `<button class="gcard ${n >= p.d ? "got" : "locked"}" data-pc="${i}"><div class="gpic">${pieceSVG(p)}${n >= p.d ? "" : `<span class="glock">${p.d}</span>`}</div><b>${esc(p.n)}</b></button>`).join("")}</div></section>`;
 }
 function bindGallery(v) { v.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { SFX.tap(); S.piece = +b.dataset.pc; openSheet("piece") }) }
 SHEETS.piece = (b, f) => {
@@ -557,6 +653,8 @@ function renderPerfil(v) {
       <label class="prow"><span class="tx"><b>Hora de despertar</b><small>Tu primera victoria de cada día</small></span><input id="pWake" type="time" value="${set().wake || "05:00"}"></label>
       <button class="prow" id="pWhy"><span class="tx"><b>Tu porqué y quién serás</b><small>${set().why ? esc(set().why) : "Lo que te mueve y lo que estás esculpiendo"}</small></span><span class="end">›</span></button>
       <button class="prow" id="pLook"><span class="tx"><b>Tu estatua</b><small>Elige la figura que esculpes</small></span><span class="end">›</span></button>
+      <button class="prow" id="pHabits"><span class="tx"><b>Tus hábitos</b><small>${S.habits.length} hábitos · añade o quita</small></span><span class="end">›</span></button>
+      <button class="prow" id="pLib"><span class="tx"><b>Tu biblioteca</b><small>Lecciones del mentor, frases abiertas y favoritas</small></span><span class="end">›</span></button>
     </div>
     <div class="plist">
       <button class="prow" id="pSnd"><span class="tx"><b>Sonido y vibración</b><small>Cincel, latido y sello al cumplir</small></span><span class="sw ${snd ? "on" : ""}"></span></button>
@@ -573,6 +671,8 @@ function renderPerfil(v) {
   $("pWake").onchange = e => { S.set.wake = e.target.value || "05:00"; saveSet(); toast(`Te levantarás a las ${S.set.wake}.`) };
   $("pWhy").onclick = () => openSheet("identity");
   $("pLook").onclick = () => openSheet("look");
+  $("pHabits").onclick = () => openSheet("habits");
+  $("pLib").onclick = () => openSheet("library");
   $("pSnd").onclick = () => { S.set.sound = !(set().sound !== false); saveSet(); if (S.set.sound) { SFX.chisel(); haptic(2) } renderPerfil(v) };
   $("pPush").onclick = enablePush;
   $("pBody").onclick = () => openSheet("body");
@@ -631,13 +731,13 @@ function renderOnb(app) {
   if (o.step === 3) { ok = o.why.trim().length >= 3; btn = ok ? "Continuar" : "Escribe tu porqué"; body = `${no}<h1 class="title">¿Por qué lo quieres de verdad?</h1><p class="sub">Escribe la razón que te levantará cuando no tengas ganas. Te la recordaré en los días difíciles.</p><textarea id="ow" rows="3" placeholder="Porque…">${esc(o.why)}</textarea><div class="sugs">${PORQUES.map(p => `<button data-why="${esc(p)}">${esc(p)}</button>`).join("")}</div>` }
   if (o.step === 4) { ok = o.who.trim().length >= 3; btn = ok ? "Continuar" : "Completa la frase"; body = `${no}<h1 class="title">¿Quién serás?</h1><p class="sub">No pienses en metas: piensa en identidad. Completa la frase.</p><p style="margin:0;font-size:22px;font-weight:800;font-stretch:110%">Dentro de 100 días soy alguien que…</p><textarea id="oq" rows="2" placeholder="…se levanta sin negociar">${esc(o.who)}</textarea><div class="sugs">${QUIENES.map(p => `<button data-who="${esc(p)}">${esc(p)}</button>`).join("")}</div>` }
   if (o.step === 5) body = `${no}<h1 class="title">Esta será tu estatua</h1><p class="sub">Hoy es un bloque de mármol. Con cada día cumplido irá saliendo de la piedra. Elige la figura.</p><div class="looks">${["a", "b"].map(x => `<button data-l="${x}" class="${o.look === x ? "on" : ""}" aria-label="Figura ${x === "a" ? "1" : "2"}">${statueSVG(4, o.name, 20, x)}</button>`).join("")}</div>`;
-  if (o.step === 6) body = `${no}<h1 class="title">¿A qué hora te levantarás?</h1><p class="sub">Ganar la primera hora es ganar el día. Será tu primera victoria cada mañana.</p><div class="opts time">${["05:00", "05:30", "06:00", "06:30"].map(t => `<button data-w="${t}" class="${o.wake === t ? "on" : ""}">${t}</button>`).join("")}</div><label class="fields"><span>Otra hora</span><input id="owk" type="time" value="${o.wake}"></label>`;
+  if (o.step === 6) body = `${no}<h1 class="title">¿A qué hora te levantarás?</h1><p class="sub">Ganar la primera hora es ganar el día. Será tu primera victoria cada mañana.</p><div class="opts time">${["05:00", "05:30", "06:00", "06:30"].map(t => `<button data-w="${t}" class="${o.wake === t ? "on" : ""}">${t}</button>`).join("")}</div><p class="sub center" style="margin-top:6px">¿Otra hora?</p>${stepperHTML("owk", o.wake, 15)}`;
   if (o.step === 7) {
     const sug = new Set(AREAS.filter(a => o.goals.has(a.id)).flatMap(a => a.h)), list = [...HABITOS_ESTOICOS.filter(h => sug.has(h.id)), ...HABITOS_ESTOICOS.filter(h => !sug.has(h.id))];
     ok = o.picks.size >= 3; btn = ok ? "Continuar" : `Elige ${3 - o.picks.size} más`;
     body = `${no}<h1 class="title">Tus hábitos</h1><p class="sub">Elige de 3 a 5. Arriba, los que más te ayudan con lo que quieres transformar.</p><div class="fields">${list.map(h => `<button class="hab ${o.picks.has(h.id) ? "on" : ""}" data-p="${h.id}"><span class="ck ${o.picks.has(h.id) ? "on" : ""}">✓</span><span style="color:var(--fg)">${esc(h.name)}${sug.has(h.id) ? ` <small style="color:var(--blue);font-weight:700">· recomendado</small>` : ""}</span></button>`).join("")}</div>`;
   }
-  if (o.step === 8) body = `${no}<h1 class="title">Así será cada día</h1><p class="sub">Ocho pasos sencillos, de la mañana a la noche. Con 6 de 8, el día queda esculpido.</p><div class="steps8">${ORDER.map((k, i) => `<div><b>${i + 1}</b><span>${k === "wake" ? `Despertar a las ${o.wake}` : NAME[k]}</span></div>`).join("")}</div><div class="card" style="display:grid;gap:8px"><p class="sub"><b style="color:var(--fg)">Cada mañana</b>, una frase sellada de un gran autor con una acción para ti.</p><p class="sub"><b style="color:var(--fg)">Cada día</b>, una lección de tu mentor para aprender en el camino.</p><p class="sub"><b style="color:var(--fg)">Cada noche</b>, tres preguntas para examinar tu día.</p></div>`;
+  if (o.step === 8) body = `${no}<h1 class="title">Así será cada día</h1><p class="sub">Dos rutinas guiadas, paso a paso. Con 6 de los 8 pasos, el día queda esculpido.</p><div class="card guide"><b>☀</b><div><h3>Mañana · 6 min</h3><p class="sub">Despertar a las ${o.wake}, respirar, tu frase sellada, afirmaciones y 3 tareas.</p></div></div><div class="card guide"><b>◐</b><div><h3>Durante el día · 30 s</h3><p class="sub">Hábitos, comidas y agua.</p></div></div><div class="card guide"><b>☾</b><div><h3>Noche · 5 min</h3><p class="sub">Cierra tus tareas, examina tu día, la lección de tu mentor y prepara mañana.</p></div></div>`;
   if (o.step === 9) { body = `${no}<h1 class="title xl">El pacto</h1><p class="pact">Yo, <em>${esc(o.name || "yo")}</em>, me comprometo a esculpir a alguien que <em>${esc(o.who || "cumple lo que se promete")}</em> durante 100 días. Cuando caiga, me levantaré.</p><div style="flex:1"></div>`; extra = `<div class="ostage" style="opacity:.22;bottom:190px">${statueSVG(0, "", 0, o.look)}</div>` }
   const foot = o.step === 9 ? `<button class="holdbtn" id="sign"><span class="fill"></span><span class="lbl">Mantén pulsado para firmar</span></button><p class="holdhint">Es tu palabra. Siente el latido.</p><button class="link center" id="oback" style="color:#fff">Atrás</button>`
     : `<button class="btn ${blue ? "white" : ""}" id="onext" ${ok ? "" : "disabled"}>${btn}</button>${o.step ? `<button class="link center" id="oback">Atrás</button>` : ""}`;
@@ -651,7 +751,7 @@ function renderOnb(app) {
   app.querySelectorAll("[data-who]").forEach(b => b.onclick = () => { o.who = b.dataset.who; SFX.tap(); re() });
   app.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { o.look = b.dataset.l; SFX.tap(); re() });
   app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { o.wake = b.dataset.w; SFX.tap(); re() });
-  if ($("owk")) $("owk").onchange = e => { o.wake = e.target.value || "05:00"; re() };
+  app.querySelectorAll("[data-for=owk]").forEach(b => b.onclick = () => { o.wake = addMin(o.wake, +b.dataset.st); SFX.tap(); haptic(); re() });
   app.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { const id = b.dataset.p; if (o.picks.has(id)) o.picks.delete(id); else if (o.picks.size < 5) o.picks.add(id); SFX.tap(); re() });
   if ($("oback")) $("oback").onclick = () => { o.step--; re() };
   if ($("onext")) $("onext").onclick = () => { SFX.tap(); haptic(); o.step++; window.scrollTo(0, 0); re() };

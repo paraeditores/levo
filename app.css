@@ -15,7 +15,7 @@
 html{overflow-x:hidden}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 body{overflow-x:hidden}
-body.lock{overflow:hidden}
+body.noscroll{overflow:hidden}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0;text-align:inherit}
 input,textarea,select{font:inherit;font-size:16px;color:var(--fg);background:var(--s1);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;width:100%;outline:none}
@@ -352,7 +352,7 @@ textarea{resize:none;min-height:60px;line-height:1.4}
 .gcard.locked .gpic,.gpic.locked{background:var(--s2)}
 .gcard.locked .gpic svg,.gpic.locked svg,.piecebig.locked svg{filter:brightness(0) opacity(.22)}
 .gcard.locked b{color:var(--muted)}
-.lock{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);min-width:34px;height:34px;padding:0 8px;border-radius:17px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-size:12px;font-weight:900}
+.glock{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);min-width:34px;height:34px;padding:0 8px;border-radius:17px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-size:12px;font-weight:900}
 .piecebig{width:min(70%,260px);border-radius:28px;background:var(--blue);padding:16px 12px 4px}
 .piecebig.locked{background:var(--s2)}
 .piecebig svg{width:100%;height:auto;display:block}
@@ -389,3 +389,59 @@ textarea{resize:none;min-height:60px;line-height:1.4}
 .moment .btn{animation:rise .6s var(--ease) .9s both}
 .moment.piece .mstage svg{animation:reveal 1.6s ease .5s both}
 @keyframes reveal{from{filter:brightness(0) opacity(.25)}to{filter:drop-shadow(-12px 20px 26px rgba(4,12,80,.5))}}
+
+/* --- portada mínima --- */
+.now{display:grid;gap:10px;position:relative;z-index:5;margin-top:-28px}
+.now-t{margin:0;font-size:26px;line-height:1.02;font-weight:800;font-stretch:118%;text-transform:uppercase}
+.now .btn{margin-top:4px}
+.emblem.sm{width:28px;height:28px;flex:none}
+.emblem.sm svg{width:17px;height:17px}
+.fl-mentor{display:flex;gap:10px;align-items:flex-start;margin:0;font-size:14.5px;line-height:1.4;color:var(--muted)}
+.guide{display:flex;gap:14px;align-items:flex-start}
+.guide > b{width:34px;height:34px;flex:none;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:900}
+.guide h3{margin:0 0 4px;font-size:16px;font-weight:800}
+
+/* --- rutinas paso a paso --- */
+.flow{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 12px) max(22px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(22px,env(safe-area-inset-left,0px));animation:fadein .3s var(--ease)}
+.fl-top{display:flex;align-items:center;gap:14px;max-width:560px;width:100%;margin:0 auto}
+.fl-top .x{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;color:var(--muted);font-size:22px;background:var(--s2);text-align:center}
+.fl-prog{flex:1;display:flex;gap:4px}
+.fl-prog i{flex:1;height:5px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.fl-prog i.on::after,.fl-prog i.cur::after{content:"";position:absolute;inset:0;background:var(--blue);transform-origin:left;animation:segin .5s var(--ease) both}
+.fl-prog i.cur::after{opacity:.4}
+.fl-label{max-width:560px;width:100%;margin:14px auto 0;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--blue)}
+.fl-stage{flex:1;position:relative;overflow:hidden;max-width:560px;width:100%;margin:0 auto}
+.fl-card{position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:12px 2px;animation:slidein .55s var(--ease) both}
+.fl-card.top{justify-content:flex-start;padding-top:22px}
+.fl-card.out{animation:slideout .34s var(--ease) both;pointer-events:none}
+@keyframes slidein{from{opacity:0;transform:translateX(56px)}}
+@keyframes slideout{to{opacity:0;transform:translateX(-56px)}}
+.fl-card > *{animation:rise .55s var(--ease) both}
+.fl-card > *:nth-child(2){animation-delay:.06s}.fl-card > *:nth-child(3){animation-delay:.12s}.fl-card > *:nth-child(4){animation-delay:.18s}.fl-card > *:nth-child(5){animation-delay:.24s}
+.fl-eyebrow{margin:0;font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fl-title{margin:0;font-size:30px;line-height:1.04;font-weight:800;font-stretch:112%;text-wrap:balance}
+.fl-clock{margin:0;font-size:104px;line-height:.85;font-weight:900;font-stretch:125%;color:var(--blue);font-variant-numeric:tabular-nums}
+.fl-quote{margin:0;font-size:27px;line-height:1.2;font-style:italic;font-weight:600;font-stretch:96%;text-wrap:pretty}
+.fl-lesson{margin:0;font-size:17px;line-height:1.5}
+.fl-q{margin:0;font-size:17px;font-weight:800;color:var(--blue)}
+.fl-foot{display:grid;gap:10px;padding-top:10px;max-width:560px;width:100%;margin:0 auto}
+.fl-statue{width:min(62%,250px);margin:0 auto;border-radius:30px;background:var(--blue);padding:16px 12px 4px}
+.fl-statue svg{display:block;width:100%;height:auto;animation:float 6s ease-in-out infinite}
+.stepper{display:flex;align-items:center;justify-content:center;gap:20px;margin:6px 0}
+.stepper button{width:58px;height:58px;border-radius:50%;background:var(--s2);font-size:28px;font-weight:600;text-align:center}
+.stepper b{font-size:60px;font-weight:900;font-stretch:125%;color:var(--blue);font-variant-numeric:tabular-nums;min-width:4ch;text-align:center}
+.chk{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px;background:var(--s1);border-radius:16px;box-shadow:0 1px 0 var(--line);font-size:17px;font-weight:600;transition:transform .15s}
+.chk:active{transform:scale(.98)}
+.chk .ck{width:32px;height:32px;border-radius:50%;flex:none;border:2px solid var(--faint);display:grid;place-items:center;color:transparent;font-size:15px;font-weight:900;transition:all .2s}
+.chk .ck.on{background:var(--blue);border-color:var(--blue);color:#fff;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.chk.on span:last-child{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--blue)}
+.bigseal{position:relative;width:128px;height:128px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 38% 34%,#6c84ff,var(--blue) 55%,#0d24a8);display:grid;place-items:center;box-shadow:inset 0 0 0 7px rgba(255,255,255,.16),0 16px 40px rgba(31,63,255,.45);animation:sealbeat 1.6s ease-in-out infinite}
+.bigseal svg{width:60px;height:60px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+@keyframes sealbeat{0%,100%{transform:scale(1)}8%{transform:scale(1.05)}16%{transform:scale(1)}24%{transform:scale(1.03)}}
+.bigseal.opening{animation:crack .65s var(--ease) forwards}
+.shock.big{position:relative;display:block;left:50%;top:-64px;width:128px;height:128px;margin:0 0 -128px -64px}
+.tips{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.tips li{padding:12px 14px;border-radius:14px;background:var(--s1);box-shadow:0 1px 0 var(--line);font-size:15px}
+.tips li::before{content:"·";color:var(--blue);font-weight:900;margin-right:8px}
+.fl-card{overflow-x:hidden}
+.fl-clock{font-size:clamp(60px,21vw,104px);font-stretch:116%}

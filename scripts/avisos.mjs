@@ -41,9 +41,9 @@ for (const uid of [...new Set(subs.map(s => s.user_id))]) {
   const n = steps.filter(Boolean).length, f = fraseSellada(today);
   let body;
   if (slot === "prueba") body = "Aviso de prueba: si lees esto, los avisos funcionan.";
-  else if (slot === "amanecer") { if (j.open) continue; const dn = cfg.start ? Math.max(1, Math.round((new Date(today + "T12:00") - new Date(cfg.start + "T12:00")) / 864e5) + 1) : 1; body = `Tu frase de hoy está sellada: es de ${f.a}. Tu mentor te espera con la lección ${dn}, «${leccion(dn).t}».` }
-  else if (slot === "mediodia") { if (n >= 3) continue; body = `Tu camino va por la piedra ${["I", "II", "III"][n] || "I"} de VIII. Un paso más y tu estatua lo nota.` }
-  else { if (examDone) continue; body = n >= 5 ? "Te queda el examen: tres preguntas y tu día queda esculpido." : "Antes de dormir, tu examen: tres preguntas, un minuto."; }
+  else if (slot === "amanecer") { if (j.open) continue; const dn = cfg.start ? Math.max(1, Math.round((new Date(today + "T12:00") - new Date(cfg.start + "T12:00")) / 864e5) + 1) : 1; body = `Buenos días. Tu rutina de la mañana te espera (6 min): tu frase sellada de hoy es de ${f.a}.` }
+  else if (slot === "mediodia") { if (n >= 3) continue; body = `Llevas ${n} de 8 pasos. Haz tu check-in rápido: hábitos y comidas en 30 segundos.` }
+  else { if (examDone) continue; const dn2 = cfg.start ? Math.max(1, Math.round((new Date(today + "T12:00") - new Date(cfg.start + "T12:00")) / 864e5) + 1) : 1; body = `Tu rutina de la noche te espera (5 min). Hoy tu mentor te trae «${leccion(dn2).t}».`; }
   await send(mine, "Levo", body.length > 180 ? body.slice(0, 177) + "…" : body, slot);
   if (slot !== "prueba") await api("avisos", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ user_id: uid, day: today, slot }) });
 }
