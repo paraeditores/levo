@@ -1,5 +1,5 @@
 /* Levo · service worker: avisos push y funcionamiento sin conexión (red primero, caché si no hay red) */
-const CACHE = "levo-v10";
+const CACHE = "levo-v11";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", e => {
@@ -12,7 +12,7 @@ self.addEventListener("fetch", e => {
 });
 self.addEventListener("push", e => {
   let d = {}; try { d = e.data.json() } catch (_) { d = { title: "Levo", body: e.data ? e.data.text() : "" } }
-  e.waitUntil(self.registration.showNotification(d.title || "Levo", { body: d.body || "", icon: "icon-192.png", badge: "icon-192.png", tag: d.tag || "levo", data: { url: "./" } }));
+  e.waitUntil(self.registration.showNotification(d.title || "Levo", { body: d.body || "", icon: "icon-192.png?v=bn", badge: "icon-192.png?v=bn", tag: d.tag || "levo", data: { url: "./" } }));
 });
 self.addEventListener("notificationclick", e => {
   e.notification.close();
