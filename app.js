@@ -144,28 +144,48 @@ function renderMain(app) {
 
 /* ================= HOY ================= */
 function heroHTML() {
-  const d = dayNum(), sc = sculpted(), fz = faseDe(sc), nx = fz.next, n = nDone(dayKey(0));
-  return `<section class="hero">
-    <div class="bar-top"><span class="wordmark">LEVO</span><button class="help" id="help" aria-label="Cómo funciona Levo">?</button></div>
-    <div class="hgrid">
-      <div class="hleft"><div class="daynum"><span>DÍA</span><b class="${d >= 100 ? "d3" : ""}" data-count="${d}">${d}</b><small>DE 100</small></div>
-        <p class="hphase">${esc(fz.name)}</p><p class="hphase-sub">${nx ? `Faltan ${nx[0] - sc} ${nx[0] - sc === 1 ? "día esculpido" : "días esculpidos"} para «${esc(nx[1])}»` : "Obra terminada. Cuídala cada día."}</p></div>
-      <div class="stage" id="stage"><div class="beat"><b></b><i></i><i></i></div>${myStatue(sc)}</div>
-    </div>${dustHTML()}
-    <div class="today"><div class="tt"><span>Hoy llevas</span><b>${n} de 8 pasos</b></div><div class="segs">${ORDER.map((_, i) => `<i class="${i < n ? "on" : ""} ${i === 5 ? "six" : ""}" style="--i:${i}"></i>`).join("")}</div>
-      <small>${n >= 6 ? "Día esculpido. Lo que hagas ahora es pulir." : `Con 6 pasos tu estatua sale un poco más del bloque. Te ${6 - n === 1 ? "falta 1" : `faltan ${6 - n}`}.`}</small></div>
-  </section>`;
+  const d = dayNum(), sc = sculpted(), fz = faseDe(sc);
+  return `<section class="hero"><div class="bar-top"><span class="wordmark">LEVO</span><button class="help" id="help" aria-label="Cómo funciona Levo">?</button></div><div class="stage" id="stage"><div class="aura"></div>${myStatue(sc)}</div><p class="hmeta">Día <b data-count="${d}">${d}</b> · ${esc(fz.name)}</p></section>`;
 }
 const _r = k => { const v = Math.sin(k * 91.7 + 13.3) * 43758.5453; return v - Math.floor(v) };
 const dustHTML = () => `<div class="dust" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="left:${(_r(i) * 100).toFixed(1)}%;width:${(2 + _r(i + 40) * 3).toFixed(1)}px;height:${(2 + _r(i + 40) * 3).toFixed(1)}px;animation-duration:${(6 + _r(i + 9) * 7).toFixed(1)}s;animation-delay:-${(_r(i + 3) * 9).toFixed(1)}s"></i>`).join("")}</div>`;
 function countUps(root) { root.querySelectorAll("[data-count]").forEach(el => { const to = +el.dataset.count; if (SHOT || matchMedia("(prefers-reduced-motion: reduce)").matches || !S.animate) { el.textContent = to; return } const t0 = performance.now(), ms = 1100; const step = now => { const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 4); el.textContent = Math.round(to * e); if (p < 1) requestAnimationFrame(step) }; el.textContent = 0; requestAnimationFrame(step) }) }
 function tilt(hero) { const st = hero.querySelector(".stage"); if (!st) return; hero.addEventListener("pointermove", e => { const r = hero.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; st.style.setProperty("--ry", (x * 14).toFixed(2) + "deg"); st.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg") }); hero.addEventListener("pointerleave", () => { st.style.setProperty("--ry", "0deg"); st.style.setProperty("--rx", "0deg") }) }
+/* ================= FOCO DE LA SEMANA: tu mentor refuerza tu punto débil ================= */
+const WEAK_TIP = {
+  wake: "Deja el móvil fuera del dormitorio y el despertador lejos de la cama: tendrás que levantarte para apagarlo.",
+  frase: "Abre tu frase nada más levantarte, antes de mirar el móvil.",
+  breath: "Respira justo al levantarte, sentado en la cama: un minuto, antes que nada.",
+  aff: "Escribe tus afirmaciones con el primer café o el primer vaso de agua.",
+  tasks: "Elige tus 3 tareas la noche anterior y empieza por la más difícil.",
+  habits: "Hazlos más pequeños esta semana: mejor 5 minutos que nada.",
+  food: "Apunta cada comida al terminarla: son 5 segundos.",
+  exam: "Pon una alarma 30 minutos antes de dormir para tu rutina de noche.",
+};
+const SEAL_TXT = { wake: "DESP", frase: "FRASE", breath: "AIRE", aff: "YO", tasks: "TAREA", habits: "HÁB", food: "COMER", exam: "EXAM" };
+const weekKey = (d = new Date()) => { const x = new Date(d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return fmt(x) };
+function weakest(before) {
+  const days = []; for (let o = 1; o <= 14; o++) { const d = new Date(before + "T12:00"); d.setDate(d.getDate() - o); const k = fmt(d); if (k < START()) break; days.push(k) }
+  if (days.length < 2) return null;
+  const r = ORDER.map(s => ({ s, n: days.filter(k => steps(k)[s]).length })).sort((a, b) => a.n - b.n)[0];
+  return r.n / days.length >= .85 ? null : { step: r.s, n: r.n, of: days.length };
+}
+function focus() {
+  const wk = weekKey(); let f = set().focus;
+  if (!f || f.week !== wk) { const w = weakest(wk); f = w ? { week: wk, step: w.step, base: w.n + "/" + w.of } : { week: wk, step: null }; S.set.focus = f; if (!DEMO && S.uid) saveSet() }
+  if (!f.step) return null;
+  let done = 0; for (let i = 0; i < 7; i++) { const d = new Date(wk + "T12:00"); d.setDate(d.getDate() + i); const k = fmt(d); if (k > dayKey(0)) break; if (k >= START() && steps(k)[f.step]) done++ }
+  return { ...f, done, target: 5, tip: WEAK_TIP[f.step] };
+}
+const focusHTML = fo => `<section class="focus"><p class="eyebrow">Foco de la semana · tu mentor</p><h3>${NAME[fo.step]}</h3><div class="fdots">${Array.from({ length: fo.target }, (_, i) => `<i class="${i < fo.done ? "on" : ""}"></i>`).join("")}</div><p class="sub">${fo.done >= fo.target ? "<b>Reto cumplido.</b> Esta debilidad ya es un poco menos débil: tienes tu sello." : `Es tu punto débil: lo cumpliste ${fo.base} días. <b>Reto: 5 días esta semana</b> (llevas ${fo.done}). ${fo.tip}`}</p></section>`;
+function sealsHTML() { const ss = set().seals || []; return `<section class="card" style="display:grid;gap:12px"><p class="eyebrow">Sellos de constancia · ${ss.length}</p>${ss.length ? `<div class="seals">${ss.slice(-12).map(x => `<span class="sealm" title="${esc(NAME[x.step])}">${SEAL_TXT[x.step] || ""}</span>`).join("")}</div>` : `<p class="sub">Cada semana tu mentor elige tu punto débil. Cúmplelo 5 días y ganas un sello.</p>`}</section>` }
 function mentorLine() {
   const k = dayKey(0), st = steps(k), n = nDone(k), hr = new Date().getHours(), d = dayNum(), why = set().why;
   const yRit = d > 1 && isRitual(dayKey(-1)), two = d > 2 && !isRitual(dayKey(-1)) && !isRitual(dayKey(-2));
   if (d === 1 && n === 0) return "Hoy das el primer golpe. No busques hacerlo perfecto: busca empezar.";
   if (n >= 8) return "Has cumplido todo lo que te prometiste. Descansa: mañana seguimos.";
   if (n >= 6) return "Hoy ya has esculpido. Lo que hagas ahora es pulir.";
+  const fo = focus(); if (fo && !st[fo.step] && fo.done < fo.target) return `Hoy, tu foco de la semana: ${NAME[fo.step].toLowerCase()}. Ese paso es el que más te transforma ahora.`;
   if (two && why) return `Dos días sin esculpir. Recuerda por qué empezaste: «${esc(why)}». Hoy solo necesitas 6 pasos.`;
   if (d > 1 && !yRit && hr < 14) return "Ayer no esculpiste. Una caída no te define; dos seguidas empiezan a hacerlo. Hoy es sagrado.";
   if (!st.wake && hr < 11) return "Tu primera victoria es levantarte. Lo demás viene después.";
@@ -300,14 +320,13 @@ function nowCard() {
   return { r: "dia", ey: "Durante el día", t: "Check-in rápido", s: "Marca tus hábitos y comidas en 30 segundos. Desde las 19:00, tu rutina de noche.", b: "Hacer check-in" };
 }
 function renderHoy(v) {
-  const c = nowCard();
-  v.innerHTML = heroHTML() + `<section class="card now"><p class="eyebrow b">${c.ey}</p><h2 class="now-t">${c.t}</h2><p class="sub">${c.s}</p>${c.b ? `<button class="btn" id="goNow">${c.b}</button>` : ""}<p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${mentorLine()}</span></p>${dueNow().length ? `<div class="due"><p class="eyebrow b">Es tu mejor momento para</p>${dueNow().map(itemHTML).join("")}</div>` : ""}</section>${planHTML()}
-    <div class="sec-h"><div><p class="eyebrow b">Tu camino de hoy</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:52%;font-size:14px">Toca un paso para hacerlo. Con 6, el día queda esculpido.</p></div><div class="trail" id="trail"></div>`;
+  const c = nowCard(), n = nDone(dayKey(0)), fo = focus();
+  v.innerHTML = heroHTML() + `<section class="now"><p class="now-ey">${c.ey}</p><h2 class="now-t">${c.t}</h2><p class="now-s">${c.s}</p>${c.b ? `<button class="btn" id="goNow">${c.b}</button>` : ""}<div class="dots" aria-label="${n} de 8 pasos">${ORDER.map((_, i) => `<i class="${i < n ? "on" : ""} ${i === 5 ? "six" : ""}" style="animation-delay:${.3 + i * .08}s"></i>`).join("")}<span>${n} de 8 · con 6 esculpes</span></div><p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${mentorLine()}</span></p>${dueNow().length ? `<div class="due"><p class="eyebrow">Es tu mejor momento para</p>${dueNow().map(itemHTML).join("")}</div>` : ""}</section>`
+    + (fo ? focusHTML(fo) : "")
+    + `<div class="sec-h"><div><p class="eyebrow">Tu camino</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:48%;font-size:13px">Toca uno para hacerlo</p></div><div class="trail" id="trail"></div>` + planHTML();
   $("help").onclick = () => { SFX.tap(); openSheet("guide") };
   if ($("goNow")) $("goNow").onclick = () => startFlow(c.r);
-  bindPlan(v);
-  drawTrail();
-  countUps(v); tilt(v.querySelector(".hero"));
+  bindPlan(v); drawTrail(); countUps(v);
 }
 const NODE_GO = { wake: () => ["manana", "m_wake"], frase: () => ["manana", "m_frase"], breath: () => ["manana", "m_breath"], aff: () => ["manana", "m_aff"], tasks: () => hasTasks() ? ["noche", "n_tasks"] : ["manana", "m_tasks"], habits: () => new Date().getHours() >= 19 ? ["noche", "n_habits"] : ["dia", "n_habits"], food: () => new Date().getHours() >= 19 ? ["noche", "n_food"] : ["dia", "n_food"], exam: () => ["noche", "n_bien"] };
 /* El sendero: nodos que serpentean de izquierda a derecha y bajan hacia la meta */
@@ -321,9 +340,9 @@ function drawTrail() {
   let svg = "", chev = "";
   all.forEach((p, i) => {
     if (!i) return; const a = all[i - 1], doneSeg = st[ORDER[i - 1]] && (i === 8 ? isRitual(k) : st[ORDER[i]]);
-    svg += `<path d="${seg(a, p)}" ${doneSeg ? `class="dn" pathLength="1" style="--i:${i}"` : ""} fill="none" stroke="${doneSeg ? "var(--blue)" : "var(--faint)"}" stroke-opacity="${doneSeg ? 1 : .6}" stroke-width="${doneSeg ? 4 : 2.5}" stroke-linecap="round" ${doneSeg ? "" : 'stroke-dasharray="2 9"'}/>`;
+    svg += `<path d="${seg(a, p)}" ${doneSeg ? `class="dn" pathLength="1" style="--i:${i}"` : ""} fill="none" stroke="${doneSeg ? "var(--fg)" : "var(--faint)"}" stroke-width="${doneSeg ? 1.6 : 1}" stroke-linecap="round" ${doneSeg ? "" : 'stroke-dasharray="1 7"'}/>`;
     const mx = (a[0] + p[0]) / 2, my = (a[1] + p[1]) / 2, ang = Math.atan2(p[1] - a[1], p[0] - a[0]) * 180 / Math.PI - 90;
-    chev += `<path d="M-6 -3L0 3L6 -3" transform="translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${ang.toFixed(0)})" fill="none" stroke="var(--blue)" stroke-opacity=".55" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    chev += `<path d="M-6 -3L0 3L6 -3" transform="translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${ang.toFixed(0)})" fill="none" stroke="var(--fg)" stroke-opacity=".35" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
   let html = `<svg class="tr" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg}${chev}</svg>`;
   ORDER.forEach((key, i) => {
@@ -518,8 +537,8 @@ const snapshot = () => { const k = dayKey(0); return { st: steps(k), n: nDone(k)
 function burst(el, big) {
   if (!el) return;
   const host = el.closest(".hero, .moment") || el.parentElement, r = el.getBoundingClientRect(), hr = host.getBoundingClientRect(), cx = r.left - hr.left + r.width * .5, cy = r.top - hr.top + r.height * .4;
-  for (let i = 0; i < (big ? 30 : 18); i++) {
-    const c = document.createElement("div"), sz = 3 + Math.random() * 6, a = Math.random() * Math.PI * 2, v = 50 + Math.random() * (big ? 180 : 120);
+  for (let i = 0; i < (big ? 14 : 8); i++) {
+    const c = document.createElement("div"), sz = 2 + Math.random() * 3, a = Math.random() * Math.PI * 2, v = 50 + Math.random() * (big ? 180 : 120);
     c.className = "chip"; c.style.cssText = `left:${cx + (Math.random() - .5) * 50}px;top:${cy + (Math.random() - .5) * 70}px;width:${sz}px;height:${sz}px`; host.appendChild(c);
     c.animate([{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: `translate(${Math.cos(a) * v}px,${Math.sin(a) * v * .7 + 80}px) rotate(${(Math.random() - .5) * 720}deg)`, opacity: 0 }], { duration: 900 + Math.random() * 500, easing: "cubic-bezier(.15,.7,.35,1)" }).onfinish = () => c.remove();
   }
@@ -534,12 +553,13 @@ function celebrate(p, label, quiet) {
   else if (!p.rit && now.rit) q.push({ big: "Día esculpido", title: `Día ${dayNum()}`, text: `${now.n} de 8 pasos. Tu estatua ha salido un poco más del bloque.` });
   else if (now.n === 8 && p.n < 8) q.push({ big: "Día completo", title: "8 de 8", text: "Hoy has cumplido todo lo que te prometiste." });
   GALERIA.forEach(pc => { if (pc.d > p.sc && pc.d <= now.sc) q.push({ big: "Nueva pieza", title: pc.n, text: pc.t + " Ya está en tu galería.", svg: pieceSVG(pc), piece: true }) });
+  const fo = focus(); if (fo && fo.done >= fo.target && !(set().seals || []).some(x => x.week === fo.week)) { S.set.seals = [...(set().seals || []), { week: fo.week, step: fo.step }]; saveSet(); q.push({ big: "Sello de constancia", title: NAME[fo.step], text: "Cinco días esta semana cumpliendo tu punto débil. Así se transforma una debilidad en fortaleza." }) }
   if (q.length) setTimeout(() => momentQueue(q), 1000);
 }
 const momentQueue = q => { if (!q.length) return; const m = q.shift(); moment({ ...m, onClose: () => setTimeout(() => momentQueue(q), 250) }) };
 function moment({ big, title, text, btn = "Seguir", days = sculpted(), onClose, svg, piece }) {
   const el = document.createElement("div"); el.className = "moment" + (piece ? " piece" : ""); el.setAttribute("role", "dialog");
-  el.innerHTML = `<div class="mstage" id="mst"><div class="rays"></div>${svg || statueSVG(faseDe(days).i, set().name, days, look())}</div><p class="big">${big}</p><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn white" id="mok">${btn}</button>`;
+  el.innerHTML = `<div class="mstage" id="mst"><div class="rays"></div>${svg || statueSVG(faseDe(days).i, set().name, days, look())}</div><p class="big">${String(big).split(" ").map((w, wi, arr) => `<span style="display:inline-block;white-space:nowrap">${[...w].map((ch, ci) => `<span style="animation-delay:${(.5 + (arr.slice(0, wi).join(" ").length + ci) * .045).toFixed(2)}s">${esc(ch)}</span>`).join("")}</span>`).join(" ")}</p><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn" id="mok">${btn}</button>`;
   document.body.append(el); SFX.sculpt(); haptic(3);
   setTimeout(() => burst($("mst"), true), 250);
   $("mok").onclick = () => { SFX.tap(); el.remove(); if (onClose) onClose() };
@@ -642,7 +662,7 @@ function renderMentor(v) {
   v.innerHTML = `<header class="mhead page-top"><div><p class="eyebrow b">Tu mentor</p><h1 class="title">Aprende en el camino</h1></div><span class="emblem" style="width:54px;height:54px">${IC.mentor}</span></header>
     <p class="sub">Cada día tu mentor te deja una idea para tu proceso. Te lleva un minuto: <b style="color:var(--fg)">léela, piénsala y escribe tu respuesta.</b></p>
     <section class="lesson">
-      <div class="lhead"><p class="eyebrow" style="color:rgba(255,255,255,.85)">Lección de hoy · ${d} de 100</p>${done ? `<span class="lok">${CHK} Hecha</span>` : ""}</div>
+      <div class="lhead"><p class="eyebrow">Lección de hoy · ${d} de 100</p>${done ? `<span class="lok">${CHK} Hecha</span>` : ""}</div>
       <h2>${esc(L.t)}</h2>
       <div class="lpart"><b>1</b><div><p class="lk">La idea</p><p>${esc(L.x)}</p></div></div>
       <div class="lpart"><b>2</b><div><p class="lk">Piénsalo</p><p class="q">${esc(L.q)}</p></div></div>
@@ -682,23 +702,22 @@ SHEETS.piece = (b, f) => {
 function renderEstatua(v) {
   const n = sculpted(), fz = faseDe(n), nx = fz.next, prevAt = FASES[fz.i][0], pct = nx ? (n - prevAt) / (nx[0] - prevAt) : 1;
   const cal = [], start = new Date(); start.setDate(start.getDate() - 34); const off = (start.getDay() + 6) % 7; start.setDate(start.getDate() - off);
-  for (let i = 0; i < 35 + off && cal.length < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); if (d > new Date()) break; const k = fmt(d), c = k >= START() ? nDone(k) : 0; cal.push(`<i class="${k === dayKey(0) ? "today" : ""}" style="${c ? `background:color-mix(in srgb,var(--blue) ${Math.round(10 + c / 8 * 85)}%,var(--s2));color:${c >= 6 ? "#fff" : "var(--fg)"}` : ""}" title="${k}">${d.getDate()}</i>`) }
+  for (let i = 0; i < 35 + off && cal.length < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); if (d > new Date()) break; const k = fmt(d), c = k >= START() ? nDone(k) : 0; cal.push(`<i class="${k === dayKey(0) ? "today" : ""}" style="${c ? `background:color-mix(in srgb,var(--fg) ${Math.round(8 + c / 8 * 92)}%,transparent);color:${c >= 5 ? "var(--bg)" : "var(--fg)"};box-shadow:none` : ""}" title="${k}">${d.getDate()}</i>`) }
   const w = S.weighs.slice(-10);
-  v.innerHTML = `<section class="hero statue-hero"><div class="bar-top"><span class="wordmark">LEVO</span><span class="eyebrow" style="color:#fff;opacity:.85">Fase ${fz.i + 1} de 8</span></div>
-      ${dustHTML()}<div class="hgrid"><div class="stage" id="stage"><div class="beat"><b></b><i></i><i></i></div>${myStatue(n)}</div>
-        <div class="hleft"><div class="daynum"><span>ESCULPIDOS</span><b class="${n >= 100 ? "d3" : ""}" data-count="${n}">${n}</b><small>DÍAS</small></div><p class="hphase">${esc(fz.name)}</p><p class="hphase-sub">${esc(fz.txt)}</p></div></div>
-      <div class="today"><div class="tt"><span>${nx ? `Hacia «${esc(nx[1])}»` : "Obra terminada"}</span><b>${nx ? `${nx[0] - n} ${nx[0] - n === 1 ? "día" : "días"}` : "100"}</b></div><div class="segs"><i class="on" style="flex:${Math.max(.01, pct)}"></i><i style="flex:${Math.max(.01, 1 - pct)}"></i></div></div></section>
+  v.innerHTML = `<section class="phero"><p class="eyebrow">Tu estatua · fase ${fz.i + 1} de 8</p><div class="stage" id="stage"><div class="aura"></div>${myStatue(n)}</div><p class="bignum"><span data-count="${n}">${n}</span><small> días esculpidos</small></p><h1 class="title" style="margin-top:4px">${esc(fz.name)}</h1><p class="sub" style="max-width:30ch;margin-top:6px">${esc(fz.txt)}</p></section>
+    ${nx ? `<div style="display:grid;gap:10px"><div class="line"><b style="width:${Math.round(pct * 100)}%"></b></div><p class="sub" style="font-size:13px">Faltan ${nx[0] - n} ${nx[0] - n === 1 ? "día" : "días"} esculpidos para «${esc(nx[1])}»</p></div>` : ""}
     ${set().who ? `<p class="sculpting">Estás esculpiendo a alguien que <em>${esc(set().who)}</em>.</p>` : ""}
-    <button class="btn" id="shareStatue">Compartir mi estatua</button>
+    <button class="btn ghost" id="shareStatue">Compartir mi estatua</button>
     ${galleryHTML()}
+    ${sealsHTML()}
     <div class="stats"><div class="stat"><b>${streak()}</b><small>días seguidos esculpiendo</small></div><div class="stat"><b>${wakeStreak()}</b><small>en pie a las ${set().wake || "05:00"}</small></div><div class="stat"><b>${dayNum()}</b><small>días de camino</small></div></div>
-    <section class="card"><p class="eyebrow" style="margin-bottom:6px">Las 8 formas de tu estatua</p><div class="phases">${FASES.map((f, i) => `<div class="ph ${i < fz.i ? "done" : i === fz.i ? "now" : ""}"><span class="n">${i < fz.i ? "✓" : i + 1}</span><div class="t"><b>${esc(f[1])}</b><small>${esc(f[2])}</small></div><span class="d">${f[0]} d</span></div>`).join("")}</div></section>
-    <section class="card"><p class="eyebrow" style="margin-bottom:12px">Últimas semanas</p><div class="cal">${["L", "M", "X", "J", "V", "S", "D"].map(d => `<span class="h">${d}</span>`).join("")}${cal.join("")}</div><p class="sub" style="font-size:14px;margin-top:12px">Más azul, más pasos cumplidos. Los días con 6 o más quedan esculpidos.</p></section>
+    <section class="card"><p class="eyebrow" style="margin-bottom:6px">Las 8 formas</p><div class="phases">${FASES.map((f, i) => `<div class="ph ${i < fz.i ? "done" : i === fz.i ? "now" : ""}"><span class="n">${i < fz.i ? "✓" : i + 1}</span><div class="t"><b>${esc(f[1])}</b><small>${esc(f[2])}</small></div><span class="d">${f[0]} d</span></div>`).join("")}</div></section>
+    <section class="card"><p class="eyebrow" style="margin-bottom:14px">Últimas semanas</p><div class="cal">${["L", "M", "X", "J", "V", "S", "D"].map(d => `<span class="h">${d}</span>`).join("")}${cal.join("")}</div><p class="sub" style="font-size:13px;margin-top:14px">Cuanto más lleno, más pasos cumplidos.</p></section>
     <section class="card" style="display:grid;gap:10px"><p class="eyebrow">Tu cuerpo</p>${w.length ? `<p class="kg">${String(w[w.length - 1].kg).replace(".", ",")} kg</p>${w.length > 1 ? sparkline(w) : ""}` : `<p class="sub">Registra tu peso una vez por semana para ver tu evolución.</p>`}
       <div class="task"><input id="kg" type="number" inputmode="decimal" step="0.1" placeholder="Peso de hoy (kg)"><button class="link" id="saveKg">Guardar</button></div></section>`;
   $("saveKg").onclick = () => { const kg = parseFloat(($("kg").value || "").replace(",", ".")); if (!kg || kg < 30 || kg > 300) return toast("Escribe un peso válido."); const k = dayKey(0); S.weighs = S.weighs.filter(x => x.day !== k).concat([{ day: k, kg }]); write(() => sb.from("weighins").upsert({ user_id: S.uid, day: k, kg }, { onConflict: "user_id,day" })); S.bodyP = { ...(S.bodyP || {}), weight_kg: kg }; write(() => sb.from("body_profile").upsert({ user_id: S.uid, ...S.bodyP, updated_at: new Date().toISOString() }, { onConflict: "user_id" })); toast("Peso guardado."); renderEstatua(v) };
   $("shareStatue").onclick = shareStatue;
-  bindGallery(v); countUps(v); tilt(v.querySelector(".hero"));
+  bindGallery(v); countUps(v);
 }
 function sparkline(w) { const W = 300, H = 70, ks = w.map(x => +x.kg), mn = Math.min(...ks), mx = Math.max(...ks), rg = Math.max(.5, mx - mn); const pts = w.map((x, i) => `${(8 + i * (W - 16) / (w.length - 1)).toFixed(1)},${(H - 8 - (x.kg - mn) / rg * (H - 16)).toFixed(1)}`); const d = ks[ks.length - 1] - ks[0]; return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-label="Evolución del peso"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="sub" style="font-size:14px">${d === 0 ? "Estable" : (d > 0 ? "+" : "−") + Math.abs(d).toFixed(1).replace(".", ",") + " kg"} en tus últimos ${w.length} registros</p>` }
 function shareStatue() { SFX.tap(); openSheet("share") }
@@ -710,11 +729,11 @@ async function shareCanvas(kind) {
   const n = sculpted(), fz = faseDe(n), d = dayNum(), e = Math.round(Math.pow(Math.min(1, n / 50), .75) * 100);
   try { await Promise.all(["900 300px Archivo", "800 80px Archivo", "600 40px Archivo", "italic 500 40px Archivo"].map(f => document.fonts.load(f))) } catch (_) { }
   const F = (w, s) => `${w} ${s}px Archivo, "Arial Black", Arial, sans-serif`, wide = v => { try { x.fontStretch = v } catch (_) { } };
-  x.fillStyle = "#1f3fff"; x.fillRect(0, 0, W, H);
+  x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
   x.strokeStyle = "rgba(255,255,255,.05)"; x.lineWidth = 2; for (let gx = 0; gx < W; gx += 60) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke() }
   const sy = story ? 250 : 130, sw = story ? 880 : 700, sx = W - sw + (story ? 230 : 190), cxs = sx + sw * .46, cys = sy + sw * .48;
   x.save(); x.translate(cxs, cys); for (let k = 0; k < 18; k++) { x.rotate(Math.PI / 9); x.fillStyle = k % 2 ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.025)"; x.beginPath(); x.moveTo(0, 0); x.lineTo(1400, -110); x.lineTo(1400, 110); x.closePath(); x.fill() } x.restore();
-  let g = x.createRadialGradient(cxs, cys, 30, cxs, cys, sw * .9); g.addColorStop(0, "rgba(255,255,255,.34)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  let g = x.createRadialGradient(cxs, cys, 30, cxs, cys, sw * .9); g.addColorStop(0, "rgba(255,255,255,.16)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
   x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = 3; [1, 1.45, 1.95].forEach(r => { x.beginPath(); x.arc(cxs, cys, sw * .3 * r, 0, Math.PI * 2); x.stroke() });
   const svg = myStatue(n).replace('<svg viewBox="0 0 200 260"', '<svg width="' + sw + '" height="' + Math.round(sw * 1.3) + '" viewBox="0 0 200 260"');
   const img = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
@@ -747,7 +766,7 @@ async function shareCanvas(kind) {
 /* ================= PERFIL ================= */
 function renderPerfil(v) {
   const fz = faseDe(sculpted()), granted = "Notification" in window && Notification.permission === "granted", snd = set().sound !== false;
-  v.innerHTML = `<header class="page-top" style="display:flex;gap:16px;align-items:center"><div style="width:80px;flex:none;background:var(--blue);border-radius:22px;padding:8px 6px 2px">${myStatue()}</div><div><p class="eyebrow b">Día ${dayNum()} · ${esc(fz.name)}</p><h1 class="title">${esc(set().name || "Tú")}</h1></div></header>
+  v.innerHTML = `<header class="page-top" style="display:flex;gap:16px;align-items:center"><div style="width:70px;flex:none">${myStatue()}</div><div><p class="eyebrow b">Día ${dayNum()} · ${esc(fz.name)}</p><h1 class="title">${esc(set().name || "Tú")}</h1></div></header>
     <div class="plist">
       <label class="prow"><span class="tx"><b>Nombre</b><small>Aparece en la placa de tu estatua</small></span><input id="pName" value="${esc(set().name || "")}" maxlength="18" style="width:140px;text-align:right"></label>
       <label class="prow"><span class="tx"><b>Hora de despertar</b><small>Tu primera victoria de cada día</small></span><input id="pWake" type="time" value="${set().wake || "05:00"}"></label>
@@ -839,8 +858,8 @@ function renderOnb(app) {
   }
   if (o.step === 8) body = `${no}<h1 class="title">Así será cada día</h1><p class="sub">Dos rutinas guiadas, paso a paso. Con 6 de los 8 pasos, el día queda esculpido.</p><div class="card guide"><b>☀</b><div><h3>Mañana · 6 min</h3><p class="sub">Despertar a las ${o.wake}, respirar, tu frase sellada, afirmaciones y 3 tareas.</p></div></div><div class="card guide"><b>◐</b><div><h3>Durante el día · 30 s</h3><p class="sub">Hábitos, comidas y agua.</p></div></div><div class="card guide"><b>☾</b><div><h3>Noche · 5 min</h3><p class="sub">Cierra tus tareas, examina tu día, la lección de tu mentor y prepara mañana.</p></div></div>`;
   if (o.step === 9) { body = `${no}<h1 class="title xl">El pacto</h1><p class="pact">Yo, <em>${esc(o.name || "yo")}</em>, me comprometo a esculpir a alguien que <em>${esc(o.who || "cumple lo que se promete")}</em> durante 100 días. Cuando caiga, me levantaré.</p><div style="flex:1"></div>`; extra = `<div class="ostage" style="opacity:.22;bottom:190px">${statueSVG(0, "", 0, o.look)}</div>` }
-  const foot = o.step === 9 ? `<button class="holdbtn" id="sign"><span class="fill"></span><span class="lbl">Mantén pulsado para firmar</span></button><p class="holdhint">Es tu palabra. Siente el latido.</p><button class="link center" id="oback" style="color:#fff">Atrás</button>`
-    : `<button class="btn ${blue ? "white" : ""}" id="onext" ${ok ? "" : "disabled"}>${btn}</button>${o.step ? `<button class="link center" id="oback">Atrás</button>` : ""}`;
+  const foot = o.step === 9 ? `<button class="holdbtn" id="sign"><span class="fill"></span><span class="lbl">Mantén pulsado para firmar</span></button><p class="holdhint">Es tu palabra. Siente el latido.</p><button class="link center" id="oback">Atrás</button>`
+    : `<button class="btn" id="onext" ${ok ? "" : "disabled"}>${btn}</button>${o.step ? `<button class="link center" id="oback">Atrás</button>` : ""}`;
   app.innerHTML = `<div class="onb ${blue ? "blue" : ""}">${extra}<div class="prog">${Array.from({ length: N }, (_, i) => `<i class="${i <= o.step ? "on" : ""}"></i>`).join("")}</div><div class="body">${body}</div><div class="foot">${foot}</div></div>`;
   const re = () => renderOnb(app);
   if ($("on")) $("on").oninput = e => o.name = e.target.value.trim();
