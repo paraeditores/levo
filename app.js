@@ -117,6 +117,7 @@ const IC = {
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   mentor: '<svg viewBox="0 0 24 24"><path d="M6 20c0-4 2.5-6 6-6s6 2 6 6M12 14a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM4 9c1-3 3-5 5-6M20 9c-1-3-3-5-5-6"/></svg>',
   laurel: '<svg viewBox="0 0 24 24"><path d="M12 21V9M12 9c-3-1-5-4-5-7M12 9c3-1 5-4 5-7M12 14c-3 0-5-2-6-4M12 14c3 0 5-2 6-4M12 18c-2.5 0-4.5-1.5-5.5-3M12 18c2.5 0 4.5-1.5 5.5-3"/></svg>',
+  dia: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h9M4 18h6"/><circle cx="17.5" cy="16.5" r="3.5"/><path d="M17.5 15v1.6l1 .9"/></svg>',
   hoy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>',
   estatua: '<svg viewBox="0 0 24 24"><path d="M7 21h10M9 21v-3h6v3M12 18c-3.5 0-5.5-2-5.5-4.5 0-1.6 1-2.7 2.2-3.3A3.9 3.9 0 0 1 12 3a3.9 3.9 0 0 1 3.3 7.2c1.2.6 2.2 1.7 2.2 3.3C17.5 16 15.5 18 12 18z"/></svg>',
   perfil: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>',
@@ -124,7 +125,7 @@ const IC = {
 const CHK = IC.check.replace("<svg", '<svg width="20" height="20" style="fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"');
 
 /* ---------- navegación ---------- */
-const TABS = [["hoy", "Hoy"], ["estatua", "Estatua"], ["perfil", "Perfil"]];
+const TABS = [["hoy", "Hoy"], ["dia", "Día"], ["mentor", "Mentor"], ["estatua", "Galería"], ["perfil", "Perfil"]];
 function route() {
   const app = $("app");
   if (!S.uid && !DEMO) return renderGate(app);
@@ -133,12 +134,16 @@ function route() {
   renderMain(app);
 }
 function renderMain(app) {
-  if (!$("view")) app.innerHTML = `<main id="view"></main><nav class="tabbar" aria-label="Secciones">${TABS.map(([k, n]) => `<button data-tab="${k}">${IC[k]}${n}</button>`).join("")}</nav>`;
+  if (!$("view")) app.innerHTML = `<main id="view"></main><nav class="tabbar" aria-label="Secciones">${TABS.map(([k, n]) => `<button data-tab="${k}">${IC[k]}${n}</button>`).join("")}<i class="tabind"></i></nav>`;
   app.querySelectorAll("[data-tab]").forEach(b => { b.setAttribute("aria-selected", b.dataset.tab === S.tab); b.onclick = () => { if (S.tab !== b.dataset.tab) SFX.tap(); S.tab = b.dataset.tab; window.scrollTo(0, 0); renderMain(app) } });
   const v = $("view"); v.className = "wrap";
   S.animate = S.lastTab !== S.tab; S.lastTab = S.tab;
   if (!TABS.some(t => t[0] === S.tab)) S.tab = "hoy";
-  ({ hoy: renderHoy, estatua: renderEstatua, perfil: renderPerfil })[S.tab](v);
+  ({ hoy: renderHoy, dia: renderDia, mentor: renderMentor, estatua: renderEstatua, perfil: renderPerfil })[S.tab](v);
+  const nav = app.querySelector(".tabbar"), act = nav && nav.querySelector('[aria-selected="true"]'), ind = nav && nav.querySelector(".tabind");
+  if (act && ind) { const r = act.getBoundingClientRect(), nr = nav.getBoundingClientRect(); ind.style.transform = `translateX(${(r.left - nr.left + r.width / 2 - 11).toFixed(1)}px)` }
+  if (S.animate) v.querySelectorAll(".now-t, .title").forEach(el => { if (el.children.length) return; el.innerHTML = el.textContent.split(" ").map((w, i) => `<span class="wd" style="animation-delay:${(.12 + i * .07).toFixed(2)}s">${esc(w)}</span>`).join(" ") });
+  attach3D();
   if (S.animate) { v.classList.add("anim"); [...v.children].forEach((c, i) => { c.classList.add("rise"); c.style.setProperty("--i", Math.min(i, 8)) }) } else v.classList.remove("anim");
 }
 
@@ -246,7 +251,7 @@ function dayItems() {
 const dueNow = () => { const cur = currentSlot(); return cur ? dayItems().filter(x => x.kind !== "routine" && !x.done && x.s === cur).slice(0, 3) : [] };
 function itemHTML(x) {
   const key = x.kind === "habit" ? "h:" + x.id : x.kind === "task" ? "t:" + x.i : "r:" + x.r;
-  return `<div class="it ${x.done ? "done" : ""} ${x.kind}"><button class="itck" data-ck="${esc(key)}" aria-label="${x.kind === "routine" ? "Abrir" : x.done ? "Desmarcar" : "Marcar como hecho"}">${x.done ? CHK : x.kind === "routine" ? "›" : ""}</button><button class="itn" data-ed="${esc(key)}"><b>${esc(x.name)}</b><small>${x.kind === "routine" ? x.sub : (x.kind === "habit" ? "Hábito" : "Tarea") + (x.t ? " · aviso a las " + x.t : "")}</small></button></div>`;
+  return `<div class="it ${x.done ? "done" : ""} ${x.kind} ${S.fresh === key ? "fresh" : ""}"><button class="itck" data-ck="${esc(key)}" aria-label="${x.kind === "routine" ? "Abrir" : x.done ? "Desmarcar" : "Marcar como hecho"}">${x.done ? CHK : x.kind === "routine" ? "›" : ""}</button><button class="itn" data-ed="${esc(key)}"><b>${esc(x.name)}</b><small>${x.kind === "routine" ? x.sub : (x.kind === "habit" ? "Hábito" : "Tarea") + (x.t ? " · aviso a las " + x.t : "")}</small></button></div>`;
 }
 function planHTML() {
   const items = dayItems(), cur = currentSlot(), ci = SLOTS.findIndex(s => s.id === cur);
@@ -261,7 +266,7 @@ function bindPlan(v) {
     const p = snapshot();
     if (t === "h") { const h = S.habits.find(z => z.id === id), was = !!doneFor(dayKey(0))[id]; if (!h) return; toggleHabit(h); if (!was) { SFX.done(); haptic() } }
     if (t === "t") { const tk = J().tasks[+id]; tk.done = !tk.done; saveJ(); if (tk.done) { SFX.done(); haptic() } }
-    S.animate = false; renderHoy($("view")); celebrate(p);
+    S.fresh = b.dataset.ck; renderMain($("app")); setTimeout(() => S.fresh = null, 900); celebrate(p);
   });
   v.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => { const [t, id] = b.dataset.ed.split(/:(.+)/); SFX.tap(); if (t === "r") return startFlow(id); S.edit = { t, id }; openSheet("item") });
 }
@@ -323,11 +328,21 @@ function renderHoy(v) {
   const c = nowCard(), n = nDone(dayKey(0)), fo = focus();
   v.innerHTML = heroHTML() + `<section class="now"><p class="now-ey">${c.ey}</p><h2 class="now-t">${c.t}</h2><p class="now-s">${c.s}</p>${c.b ? `<button class="btn" id="goNow">${c.b}</button>` : ""}<div class="dots" aria-label="${n} de 8 pasos">${ORDER.map((_, i) => `<i class="${i < n ? "on" : ""} ${i === 5 ? "six" : ""}" style="animation-delay:${.3 + i * .08}s"></i>`).join("")}<span>${n} de 8 · con 6 esculpes</span></div><p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${mentorLine()}</span></p>${dueNow().length ? `<div class="due"><p class="eyebrow">Es tu mejor momento para</p>${dueNow().map(itemHTML).join("")}</div>` : ""}</section>`
     + (fo ? focusHTML(fo) : "")
-    + `<div class="sec-h"><div><p class="eyebrow">Tu camino</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:48%;font-size:13px">Toca uno para hacerlo</p></div><div class="trail" id="trail"></div>` + planHTML();
+    + `<button class="btn ghost" id="goDia">Ver mi día y mi camino</button>`;
   $("help").onclick = () => { SFX.tap(); openSheet("guide") };
   if ($("goNow")) $("goNow").onclick = () => startFlow(c.r);
-  bindPlan(v); drawTrail(); countUps(v);
+  if ($("goDia")) $("goDia").onclick = () => { S.tab = "dia"; window.scrollTo(0, 0); renderMain($("app")) };
+  bindPlan(v); countUps(v);
 }
+function renderDia(v) {
+  const hoy = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  v.innerHTML = `<header class="page-top"><p class="eyebrow">Tu día</p><h1 class="title xl">${hoy}</h1><p class="sub" style="margin-top:8px">Tu camino de 8 pasos y cada cosa a su mejor hora.</p></header>
+    <div class="sec-h" style="margin-top:6px"><div><p class="eyebrow">Tu camino</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:48%;font-size:13px">Toca uno para hacerlo. Con 6, esculpes.</p></div><div class="trail" id="trail"></div>` + planHTML();
+  bindPlan(v); drawTrail();
+}
+/* La escultura 3D sustituye al SVG en cuanto está lista */
+function attach3D() { const st = $("stage"); if (st && window.Statue3D && window.Statue3D.ok) { const n = sculpted(); window.Statue3D.mount(st, { days: n, stage: faseDe(n).i }) } }
+addEventListener("statue3d", () => attach3D());
 const NODE_GO = { wake: () => ["manana", "m_wake"], frase: () => ["manana", "m_frase"], breath: () => ["manana", "m_breath"], aff: () => ["manana", "m_aff"], tasks: () => hasTasks() ? ["noche", "n_tasks"] : ["manana", "m_tasks"], habits: () => new Date().getHours() >= 19 ? ["noche", "n_habits"] : ["dia", "n_habits"], food: () => new Date().getHours() >= 19 ? ["noche", "n_food"] : ["dia", "n_food"], exam: () => ["noche", "n_bien"] };
 /* El sendero: nodos que serpentean de izquierda a derecha y bajan hacia la meta */
 const XS = [.22, .62, .8, .42, .2, .6, .78, .4];
@@ -354,7 +369,7 @@ function drawTrail() {
   t.innerHTML = html;
   t.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { const [r, at] = NODE_GO[b.dataset.step](); startFlow(r, at) });
 }
-addEventListener("resize", () => { if (S.tab === "hoy" && !$("flow")) drawTrail() });
+addEventListener("resize", () => { if ($("trail") && !$("flow")) drawTrail() });
 
 /* ================= RUTINAS PASO A PASO ================= */
 const ROUT = {
@@ -536,6 +551,7 @@ function bindHold(btn, ms, onDone) {
 const snapshot = () => { const k = dayKey(0); return { st: steps(k), n: nDone(k), rit: isRitual(k), sc: sculpted() } };
 function burst(el, big) {
   if (!el) return;
+  if (el.classList && el.classList.contains("has3d") && window.Statue3D) { window.Statue3D.burst(); return }
   const host = el.closest(".hero, .moment") || el.parentElement, r = el.getBoundingClientRect(), hr = host.getBoundingClientRect(), cx = r.left - hr.left + r.width * .5, cy = r.top - hr.top + r.height * .4;
   for (let i = 0; i < (big ? 14 : 8); i++) {
     const c = document.createElement("div"), sz = 2 + Math.random() * 3, a = Math.random() * Math.PI * 2, v = 50 + Math.random() * (big ? 180 : 120);
@@ -785,13 +801,13 @@ function renderPerfil(v) {
       <button class="prow danger ${S.resetArm ? "armed" : ""}" id="pReset"><span class="tx"><b>${S.resetArm ? "Toca otra vez para borrarlo todo" : "Empezar de cero"}</b><small>${S.resetArm ? "Se borran tu diario, tus días, tus hábitos y tu estatua. No se puede deshacer." : "Como si acabaras de descargar Levo"}</small></span></button>
       <button class="prow" id="pOut"><span class="tx"><b>Cerrar sesión</b></span></button>
     </div>
-    <p class="sub center" style="font-size:13px">Levo · Esculpe tu mejor versión, un día cada vez</p>`;
+    <p class="sub center" style="font-size:13px">Levo · Esculpe tu mejor versión, un día cada vez</p><p class="sub center" style="font-size:11px;opacity:.7">Escultura 3D basada en el modelo «Lee Perry-Smith» de Infinite Realities (CC BY 3.0).</p>`;
   $("pName").onchange = e => { S.set.name = e.target.value.trim(); saveSet(); toast("Nombre guardado.") };
   $("pWake").onchange = e => { S.set.wake = e.target.value || "05:00"; saveSet(); toast(`Te levantarás a las ${S.set.wake}.`) };
   $("pWhy").onclick = () => openSheet("identity");
   $("pLook").onclick = () => openSheet("look");
   $("pHabits").onclick = () => openSheet("habits");
-  $("pLib").onclick = () => openSheet("library");
+  $("pLib").onclick = () => { S.tab = "mentor"; window.scrollTo(0, 0); renderMain($("app")) };
   $("pSnd").onclick = () => { S.set.sound = !(set().sound !== false); saveSet(); if (S.set.sound) { SFX.chisel(); haptic(2) } renderPerfil(v) };
   $("pPush").onclick = enablePush;
   $("pBody").onclick = () => openSheet("body");
@@ -888,6 +904,16 @@ function renderOnb(app) {
     moment({ big: "Pacto firmado", title: `Día ${dayNum()}`, text: "Tu bloque de mármol te espera. Empieza por el primer paso de tu camino.", btn: "Empezar mi camino", onClose: () => { route(); setTimeout(() => openSheet("guide"), 300) } });
   });
 }
+
+/* ---------- detalles de movimiento ---------- */
+const RMQ = matchMedia("(prefers-reduced-motion: reduce)");
+document.addEventListener("pointerdown", e => {
+  const b = e.target.closest(".btn,.addbtn,.prow,.slots button,.seg3 button,.opts button,.areas button,.chk"); if (!b || RMQ.matches) return;
+  const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height) * 1.2, sp = document.createElement("span");
+  sp.className = "ripple"; sp.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`; b.append(sp); setTimeout(() => sp.remove(), 800);
+}, { passive: true });
+let _par = 0;
+addEventListener("scroll", () => { if (_par || RMQ.matches) return; _par = requestAnimationFrame(() => { _par = 0; const st = (S.tab === "hoy" || S.tab === "estatua") && !$("flow") ? $("stage") : null; if (!st) return; const y = Math.max(0, Math.min(window.scrollY, 520)); st.style.transform = `translateY(${(y * .32).toFixed(1)}px) scale(${(1 - y / 2400).toFixed(4)})`; st.style.opacity = Math.max(.12, 1 - y / 560).toFixed(3) }) }, { passive: true });
 
 /* ---------- arranque ---------- */
 function demo() {

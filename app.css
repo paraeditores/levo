@@ -413,3 +413,22 @@ textarea{resize:none;min-height:56px;line-height:1.45}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .shot *,.shot *::before,.shot *::after{animation:none!important;transition:none!important}
+
+/* --- escultura 3D --- */
+.stage.has3d > svg{visibility:hidden}
+.stage .m3d{position:absolute;left:0;top:0;z-index:2;display:block;cursor:grab;animation:fadein 1.4s var(--ease)}
+.stage .m3d:active{cursor:grabbing}
+.stage{will-change:transform,opacity}
+/* --- pestañas: cinco, con una línea que se desliza --- */
+.tabbar{position:fixed}
+.tabbar button{max-width:84px;font-size:9.5px;letter-spacing:.1em}
+.tabind{position:absolute;top:0;left:0;width:22px;height:1px;background:var(--fg);transition:transform .7s var(--slow)}
+/* --- títulos que se revelan palabra a palabra --- */
+.wd{display:inline-block;animation:reveal .9s var(--slow) both}
+/* --- onda al pulsar --- */
+.btn,.addbtn,.prow,.slots button,.seg3 button,.opts button,.areas button,.chk{position:relative;overflow:hidden}
+.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.18;transform:scale(0);animation:ripple .8s var(--ease) forwards;pointer-events:none}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+/* --- el check se dibuja --- */
+.it.fresh .itck{animation:nodein .6s var(--slow)}
+.it.fresh .itck svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:draw .7s .1s var(--ease) forwards}
