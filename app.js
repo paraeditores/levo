@@ -33,13 +33,33 @@ const SND = { ctx: null };
 function ac() { if (set().sound === false) return null; try { if (!SND.ctx) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return null; SND.ctx = new A() } if (SND.ctx.state === "suspended") SND.ctx.resume(); return SND.ctx } catch (e) { return null } }
 function tone(f, d, { type = "sine", v = .2, t = 0, f2 } = {}) { const c = ac(); if (!c) return; const o = c.createOscillator(), g = c.createGain(), s = c.currentTime + t; o.type = type; o.frequency.setValueAtTime(f, s); if (f2) o.frequency.exponentialRampToValueAtTime(f2, s + d); g.gain.setValueAtTime(.0001, s); g.gain.exponentialRampToValueAtTime(v, s + .008); g.gain.exponentialRampToValueAtTime(.0001, s + d); o.connect(g).connect(c.destination); o.start(s); o.stop(s + d + .03) }
 function noise(d, { v = .3, t = 0, hp = 1500, bp } = {}) { const c = ac(); if (!c) return; const n = Math.floor(c.sampleRate * d), b = c.createBuffer(1, n, c.sampleRate), a = b.getChannelData(0); for (let i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); const s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(); fl.type = bp ? "bandpass" : "highpass"; fl.frequency.value = bp || hp; g.gain.value = v; s.buffer = b; s.connect(fl).connect(g).connect(c.destination); s.start(c.currentTime + t) }
+/* Instrumentos de Tone.js: se crean al primer toque (el navegador lo exige) */
+const TN = { on: false };
+async function toneInit() {
+  if (TN.on || TN.busy || !window.Tone || set().sound === false) return; TN.busy = true;
+  try {
+    await Tone.start();
+    const rev = new Tone.Reverb({ decay: 1.6, wet: .16 }).toDestination();
+    /* cristal: notas limpias y cortas, como las confirmaciones de iOS */
+    TN.glass = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: .002, decay: .26, sustain: 0, release: .28 }, volume: -21 }).connect(rev);
+    TN.bell = new Tone.PolySynth(Tone.FMSynth, { harmonicity: 2, modulationIndex: 2.5, oscillator: { type: "sine" }, envelope: { attack: .002, decay: .5, sustain: 0, release: .6 }, modulation: { type: "sine" }, modulationEnvelope: { attack: .002, decay: .1, sustain: 0, release: .1 }, volume: -26 }).connect(rev);
+    TN.tick = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: .001, decay: .03, sustain: 0, release: .02 }, volume: -28 }).toDestination();
+    TN.thump = new Tone.MembraneSynth({ pitchDecay: .025, octaves: 2, envelope: { attack: .001, decay: .16, sustain: 0, release: .04 }, volume: -17 }).toDestination();
+    TN.pad = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: .7, decay: 1.2, sustain: .15, release: 1.8 }, volume: -31 }).connect(rev);
+    TN.drop = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: .001, decay: .07, sustain: 0, release: .03 }, volume: -25 }).toDestination();
+    TN.on = true;
+  } catch (e) { } TN.busy = false;
+}
+const tn = fn => { if (set().sound === false) return false; if (!TN.on) { toneInit(); return false } try { fn(Tone.now()) } catch (e) { } return true };
 const SFX = {
-  tap: () => tone(1100, .05, { type: "triangle", v: .035 }),
-  beat: () => { tone(64, .15, { v: .55 }); tone(56, .13, { v: .38, t: .17 }) },
-  chisel: () => { noise(.09, { v: .55, hp: 2600 }); tone(2300, .4, { type: "triangle", v: .07, f2: 1600 }); tone(150, .14, { v: .32, f2: 70 }) },
-  seal: () => { noise(.2, { v: .5, bp: 850 }); tone(330, .28, { type: "triangle", v: .12, f2: 110 }) },
-  done: () => { tone(660, .5, { v: .09 }); tone(990, .7, { v: .07, t: .09 }) },
-  sculpt: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 1, { v: .085, t: i * .12, type: "triangle" })),
+  tap: () => tn(t => TN.tick.triggerAttackRelease("G6", .03, t, .7)) || tone(1600, .03, { type: "sine", v: .015 }),
+  beat: () => tn(t => { TN.thump.triggerAttackRelease("A1", "32n", t, .7); TN.thump.triggerAttackRelease("F1", "32n", t + .16, .45) }) || (tone(70, .12, { v: .25 }), tone(60, .1, { v: .16, t: .16 })),
+  chisel: () => tn(t => { TN.bell.triggerAttackRelease("E7", "32n", t, .5); TN.glass.triggerAttackRelease("B6", "32n", t + .04, .35) }) || tone(2600, .18, { type: "sine", v: .03 }),
+  seal: () => tn(t => { TN.glass.triggerAttackRelease("E5", "16n", t, .55); TN.glass.triggerAttackRelease("B5", "16n", t + .09, .5); TN.bell.triggerAttackRelease("E6", "8n", t + .18, .4) }) || (tone(660, .25, { v: .04 }), tone(990, .3, { v: .035, t: .09 })),
+  done: () => tn(t => { TN.glass.triggerAttackRelease("C6", "16n", t, .6); TN.glass.triggerAttackRelease("G6", "16n", t + .08, .5) }) || (tone(1046, .25, { v: .04 }), tone(1568, .3, { v: .03, t: .08 })),
+  sculpt: () => tn(t => { ["C5", "E5", "G5", "C6"].forEach((n, i) => TN.glass.triggerAttackRelease(n, "16n", t + i * .07, .55)); TN.bell.triggerAttackRelease("G6", "8n", t + .32, .45); TN.pad.triggerAttackRelease(["C4", "G4"], "1n", t, .4) }) || [523, 659, 784, 1047].forEach((f, i) => tone(f, .35, { v: .04, t: i * .07 })),
+  breath: i => tn(t => TN.pad.triggerAttackRelease(["A3", "E4", "D4", "A3"][i], "2n", t, .45)) || tone([392, 523, 330, 262][i], 1.2, { v: .025 }),
+  water: n => tn(t => { TN.drop.triggerAttackRelease(620 + (n % 10) * 30, .06, t, .6); TN.drop.frequency.exponentialRampToValueAtTime(1350 + (n % 10) * 40, t + .05) }) || tone(880 + n * 40, .08, { v: .03 }),
 };
 let _hl = null;
 function haptic(n = 1) {
@@ -50,7 +70,7 @@ function haptic(n = 1) {
     for (let k = 0; k < n; k++) setTimeout(() => _hl.click(), k * 110);
   } catch (e) { }
 }
-document.addEventListener("pointerdown", () => ac(), { once: true });
+document.addEventListener("pointerdown", () => { ac(); toneInit() }, { once: true });
 
 /* ---------- el ritual: ocho pasos ---------- */
 const ORDER = ["wake", "frase", "breath", "aff", "tasks", "habits", "food", "exam"];
@@ -115,6 +135,7 @@ const IC = {
   food: '<svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 21V3c-2 1-3 4-3 8h3"/></svg>',
   exam: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   mentor: '<svg viewBox="0 0 24 24"><path d="M6 20c0-4 2.5-6 6-6s6 2 6 6M12 14a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM4 9c1-3 3-5 5-6M20 9c-1-3-3-5-5-6"/></svg>',
   laurel: '<svg viewBox="0 0 24 24"><path d="M12 21V9M12 9c-3-1-5-4-5-7M12 9c3-1 5-4 5-7M12 14c-3 0-5-2-6-4M12 14c3 0 5-2 6-4M12 18c-2.5 0-4.5-1.5-5.5-3M12 18c2.5 0 4.5-1.5 5.5-3"/></svg>',
   dia: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h9M4 18h6"/><circle cx="17.5" cy="16.5" r="3.5"/><path d="M17.5 15v1.6l1 .9"/></svg>',
@@ -132,6 +153,7 @@ function route() {
   if (!S.ready) return;
   if (!set().v3) return renderOnb(app);
   renderMain(app);
+  if (!DEMO && set().v3 && !set().seenTabs && !busy()) { S.set.seenTabs = true; saveSet(); setTimeout(() => openSheet("guide"), 900) }
 }
 function renderMain(app) {
   if (!$("view")) app.innerHTML = `<main id="view"></main><nav class="tabbar" aria-label="Secciones">${TABS.map(([k, n]) => `<button data-tab="${k}">${IC[k]}${n}</button>`).join("")}<i class="tabind"></i></nav>`;
@@ -251,6 +273,8 @@ function dayItems() {
 const dueNow = () => { const cur = currentSlot(); return cur ? dayItems().filter(x => x.kind !== "routine" && !x.done && x.s === cur).slice(0, 3) : [] };
 function itemHTML(x) {
   const key = x.kind === "habit" ? "h:" + x.id : x.kind === "task" ? "t:" + x.i : "r:" + x.r;
+  const lk = itemLock(x);
+  if (lk) return `<div class="it ${x.kind} late"><button class="itck" data-lock="${esc(lockText(lk))}" aria-label="${esc(lockText(lk))}">${IC.clock.replace("<svg", '<svg width="15" height="15" style="fill:none;stroke:currentColor;stroke-width:1.4"')}</button><button class="itn" data-ed="${esc(key)}"><b>${esc(x.name)}</b><small>${esc(lockText(lk))}</small></button></div>`;
   return `<div class="it ${x.done ? "done" : ""} ${x.kind} ${S.fresh === key ? "fresh" : ""}"><button class="itck" data-ck="${esc(key)}" aria-label="${x.kind === "routine" ? "Abrir" : x.done ? "Desmarcar" : "Marcar como hecho"}">${x.done ? CHK : x.kind === "routine" ? "›" : ""}</button><button class="itn" data-ed="${esc(key)}"><b>${esc(x.name)}</b><small>${x.kind === "routine" ? x.sub : (x.kind === "habit" ? "Hábito" : "Tarea") + (x.t ? " · aviso a las " + x.t : "")}</small></button></div>`;
 }
 function planHTML() {
@@ -261,6 +285,7 @@ function planHTML() {
 }
 function bindPlan(v) {
   if ($("addItem")) $("addItem").onclick = () => { SFX.tap(); S.edit = null; S.addType = "task"; openSheet("item") };
+  v.querySelectorAll("[data-lock]").forEach(b => b.onclick = () => { toast(b.dataset.lock + ": ya no se puede marcar"); haptic() });
   v.querySelectorAll("[data-ck]").forEach(b => b.onclick = () => {
     const [t, id] = b.dataset.ck.split(/:(.+)/); if (t === "r") return startFlow(id);
     const p = snapshot();
@@ -317,12 +342,43 @@ function itemSheet(b, f) {
 const hasTasks = () => (J().tasks || []).some(t => t && t.t && t.t.trim());
 const mornCount = () => { const st = steps(dayKey(0)); return [st.wake, st.breath, st.frase, st.aff, hasTasks()].filter(Boolean).length };
 const nightCount = () => { const st = steps(dayKey(0)); return [st.habits, st.food, st.exam, !!J().closed].filter(Boolean).length };
+/* ================= EL TIEMPO MANDA: cada cosa tiene su hora (la del reloj del móvil) ================= */
+const nowMin = () => toMin(hhmm());
+const W0 = () => toMin(set().wake || "05:00");
+const MORNING_END = () => Math.min(1439, Math.max(780, W0() + 420));
+const NIGHT_FROM = 1140;
+const STEP_WIN = { wake: () => [W0() - 120, W0() + 120], breath: () => [W0() - 60, MORNING_END()], frase: () => [W0() - 60, MORNING_END()], aff: () => [W0() - 60, MORNING_END()], tasks: () => [W0() - 60, MORNING_END()], exam: () => [NIGHT_FROM, 1439], action: () => [NIGHT_FROM - 60, 1439] };
+const MEAL_WIN = { desayuno: () => [W0() - 60, Math.max(720, W0() + 300)], comida: () => [660, 1050], cena: () => [1110, 1439] };
+const slotDeadline = s => { if (!s || s === "dia") return 1439; const r = slotRange(s); return r ? Math.min(1439, r[1] + 30) : 1439 };
+const winState = w => { const m = nowMin(); return m < w[0] ? "early" : m > w[1] ? "late" : "open" };
+const FLOW_KEY = { m_wake: "wake", m_breath: "breath", m_frase: "frase", m_aff: "aff", m_tasks: "tasks", n_action: "action", n_bien: "exam", n_mejorar: "exam", n_gracias: "exam" };
+/* ¿Está cerrado este paso del camino? Lo ya hecho siempre se puede ver */
+function stepLock(key) {
+  const st = steps(dayKey(0)); if (st[key]) return null;
+  if (key === "habits" || key === "food") return null;
+  if (key === "tasks" && hasTasks()) return null;
+  const w = STEP_WIN[key] ? STEP_WIN[key]() : null; if (!w) return null;
+  const s = winState(w); return s === "open" ? null : { s, w };
+}
+const lockText = l => l.s === "late" ? `Se pasó la hora (${m2t(l.w[1])})` : `Desde las ${m2t(l.w[0])}`;
+function itemLock(x) {
+  if (x.done) return null;
+  if (x.kind === "habit" || x.kind === "task") { const d = slotDeadline(x.s); return nowMin() > d ? { s: "late", w: [0, d] } : null }
+  if (x.kind === "routine" && x.r === "manana") { const w = [0, MORNING_END()]; return nowMin() > w[1] ? { s: "late", w } : null }
+  if (x.kind === "routine" && x.r === "noche") { const w = [NIGHT_FROM - 60, 1439]; return nowMin() < w[0] ? { s: "early", w } : null }
+  return null;
+}
+function lockedCard(c, nav, l, what) {
+  c.innerHTML = `<p class="fl-eyebrow">${l.s === "late" ? "Se pasó la hora" : "Todavía no"}</p><div class="lockic">${IC.clock}</div><h2 class="fl-title">${l.s === "late" ? `${what} se cerró a las ${m2t(l.w[1])}` : `${what} se abre a las ${m2t(l.w[0])}`}</h2>${MLINE(l.s === "late" ? "El tiempo no vuelve, pero mañana sí. Cada cosa a su hora: esa es la disciplina." : "Cada cosa a su hora. Vuelve entonces y estará esperándote.")}`;
+  nav.primary("Siguiente", nextStep);
+}
+const STEP_WHAT = { wake: "Despertar", breath: "La respiración", frase: "Tu frase", aff: "Las afirmaciones", tasks: "Elegir tus tareas", exam: "El examen nocturno", action: "Tu acción de hoy" };
 function nowCard() {
   const k = dayKey(0), hr = new Date().getHours(), mc = mornCount(), nc = nightCount(), closed = J().closed && steps(k).exam;
   if (closed) return { r: null, ey: "Hoy", t: "Día cerrado", s: isRitual(k) ? "Has esculpido tu estatua. Descansa." : "Mañana es un día nuevo.", b: "" };
-  if (mc < 5 && hr < 16) return { r: "manana", ey: "Ahora", t: "Rutina de la mañana", s: `${mc} de 5 pasos · unos 6 minutos`, b: mc ? "Continuar" : "Empezar" };
-  if (hr >= 19) return { r: "noche", ey: "Ahora", t: "Rutina de la noche", s: `${nc ? nc + " de 4 · " : ""}Cierra el día en 5 minutos`, b: nc ? "Continuar" : "Empezar" };
-  return { r: "dia", ey: "Durante el día", t: "Check-in rápido", s: "Marca tus hábitos y comidas en 30 segundos. Desde las 19:00, tu rutina de noche.", b: "Hacer check-in" };
+  if (mc < 5 && nowMin() <= MORNING_END()) return { r: "manana", ey: "Ahora", t: "Rutina de la mañana", s: `${mc} de 5 pasos · hasta las ${m2t(MORNING_END())}`, b: mc ? "Continuar" : "Empezar" };
+  if (nowMin() >= NIGHT_FROM - 60) return { r: "noche", ey: "Ahora", t: "Rutina de la noche", s: `${nc ? nc + " de 4 · " : ""}Cierra el día en 5 minutos`, b: nc ? "Continuar" : "Empezar" };
+  return { r: "dia", ey: "Durante el día", t: "Check-in rápido", s: `Marca tus hábitos y comidas en 30 segundos. Desde las ${m2t(NIGHT_FROM - 60)}, tu rutina de noche.`, b: "Hacer check-in" };
 }
 function renderHoy(v) {
   const c = nowCard(), n = nDone(dayKey(0)), fo = focus();
@@ -362,12 +418,13 @@ function drawTrail() {
   let html = `<svg class="tr" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg}${chev}</svg>`;
   ORDER.forEach((key, i) => {
     const [x, y] = P[i], done = st[key], isNow = i === now, left = XS[i] >= .5;
-    html += `<button class="node ${done ? "done" : ""} ${isNow ? "now" : ""}" data-step="${key}" style="left:${x}px;top:${y}px;--i:${i}" aria-label="${i + 1}. ${NAME[key]}: ${esc(stepStatus(key))}">${done ? IC.check : IC[key]}<span class="num">${i + 1}</span></button>`;
-    html += `<button class="nlabel ${left ? "l" : "r"}" data-step="${key}" style="top:${y}px;${left ? `right:${W - x + 42}px` : `left:${x + 42}px`}" tabindex="-1">${isNow ? `<span class="now-pill">Ahora</span>` : ""}<b>${NAME[key]}</b><small>${esc(stepStatus(key))}</small></button>`;
+    const lk = stepLock(key);
+    html += `<button class="node ${done ? "done" : ""} ${isNow && !lk ? "now" : ""} ${lk ? "late" : ""}" data-step="${key}" style="left:${x}px;top:${y}px;--i:${i}" aria-label="${i + 1}. ${NAME[key]}: ${esc(stepStatus(key))}">${done ? IC.check : IC[key]}<span class="num">${i + 1}</span></button>`;
+    html += `<button class="nlabel ${left ? "l" : "r"}" data-step="${key}" style="top:${y}px;${left ? `right:${W - x + 42}px` : `left:${x + 42}px`}" tabindex="-1">${isNow && !lk ? `<span class="now-pill">Ahora</span>` : ""}<b>${NAME[key]}</b><small>${esc(lk ? lockText(lk) : stepStatus(key))}</small></button>`;
   });
   html += `<div class="goal" style="left:${goal[0]}px;top:${goal[1] - 20}px"><div class="gm">${myStatue()}</div><p>${isRitual(k) ? "Hoy ya has esculpido" : "Con 6 pasos, tu estatua avanza"}${nextPiece() ? `<br><span style="color:var(--blue)">Próxima pieza: ${esc(nextPiece().n)} en ${nextPiece().d - sculpted()} ${nextPiece().d - sculpted() === 1 ? "día" : "días"}</span>` : ""}</p></div>`;
   t.innerHTML = html;
-  t.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { const [r, at] = NODE_GO[b.dataset.step](); startFlow(r, at) });
+  t.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { const l = stepLock(b.dataset.step); if (l) { toast(`${STEP_WHAT[b.dataset.step]}: ${lockText(l).toLowerCase()}`); haptic(); return } const [r, at] = NODE_GO[b.dataset.step](); startFlow(r, at) });
 }
 addEventListener("resize", () => { if ($("trail") && !$("flow")) drawTrail() });
 
@@ -379,6 +436,7 @@ const ROUT = {
 };
 const FL = { r: null, list: [], i: 0, snap: null, iv: 0 };
 function startFlow(r, at) {
+  if (r === "noche" && nowMin() < NIGHT_FROM - 60) { toast(`Tu rutina de noche se abre a las ${m2t(NIGHT_FROM - 60)}`); haptic(); return }
   const j = J(); let list = [...ROUT[r].steps];
   if (r === "noche") { if (!j.open) list = list.filter(s => s !== "n_action"); if (!hasTasks()) list = list.filter(s => s !== "n_tasks") }
   FL.r = r; FL.list = list; FL.i = Math.max(0, at ? list.indexOf(at) : 0); FL.snap = snapshot();
@@ -403,7 +461,8 @@ function renderStep() {
     skip: (label = "Saltar este paso") => { const b = document.createElement("button"); b.className = "link center"; b.textContent = label; b.onclick = () => { SFX.tap(); nextStep() }; foot.append(b); return b },
     hold: (label, fn) => { foot.insertAdjacentHTML("afterbegin", `<button class="holdbtn" id="flhold"><span class="fill"></span><span class="lbl">${label}</span></button>`); bindHold($("flhold"), 1700, fn) },
   };
-  STEPUI[id](card, nav);
+  const fk = FLOW_KEY[id], l = fk ? stepLock(fk) : null;
+  if (l) lockedCard(card, nav, l, STEP_WHAT[fk]); else STEPUI[id](card, nav);
 }
 const MLINE = t => `<p class="fl-mentor"><span class="emblem sm">${IC.mentor}</span><span>${t}</span></p>`;
 const addMin = (t, m) => { const x = ((toMin(t) + m) % 1440 + 1440) % 1440; return `${pad(Math.floor(x / 60))}:${pad(x % 60)}` };
@@ -435,7 +494,7 @@ const STEPUI = {
       state = "run"; t0 = Date.now(); b.textContent = "Respirando…"; b.disabled = true;
       FL.iv = setInterval(() => {
         const el = (Date.now() - t0) / 1000, left = Math.max(0, 64 - el), i = Math.floor(el / 4) % 4;
-        if (i !== lastI && left > 0) { lastI = i; tone([392, 523, 330, 262][i], 1.2, { v: .05 }); haptic() }
+        if (i !== lastI && left > 0) { lastI = i; SFX.breath(i); haptic() }
         $("ph").textContent = left <= 0 ? "Hecho" : phases[i][0]; $("cd").textContent = left <= 0 ? "Mente en calma" : `${Math.ceil(left)} s`; $("orb").style.transform = `scale(${left <= 0 ? 1.4 : phases[i][1]})`;
         if (left <= 0) { clearInterval(FL.iv); state = "done"; j.breath = true; saveJ(); SFX.done(); haptic(2); b.disabled = false; b.textContent = "Continuar" }
       }, 200);
@@ -482,24 +541,24 @@ const STEPUI = {
   n_tasks(c, nav) {
     const j = J(), tasks = j.tasks.map((t, i) => ({ ...t, i })).filter(t => t.t && t.t.trim());
     c.classList.add("top");
-    c.innerHTML = `<p class="fl-eyebrow">Tus tareas</p><h2 class="fl-title">¿Cuáles has terminado?</h2><div class="fields">${tasks.map(t => `<button class="chk ${t.done ? "on" : ""}" data-t="${t.i}"><span class="ck ${t.done ? "on" : ""}">✓</span><span>${esc(t.t)}</span></button>`).join("")}</div>${MLINE("Con 2 de 3 cuenta el paso. Lo que no terminaste, mañana tiene otra oportunidad.")}`;
-    c.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { const t = j.tasks[+x.dataset.t]; t.done = !t.done; saveJ(); x.classList.toggle("on", t.done); x.querySelector(".ck").classList.toggle("on", t.done); if (t.done) { SFX.done(); haptic() } });
+    c.innerHTML = `<p class="fl-eyebrow">Tus tareas</p><h2 class="fl-title">¿Cuáles has terminado?</h2><div class="fields">${tasks.map(t => { const lk = !t.done && nowMin() > slotDeadline(t.s || suggestSlot(t.t, "task", t.i)); return `<button class="chk ${t.done ? "on" : ""} ${lk ? "late" : ""}" data-t="${t.i}" ${lk ? 'data-late="1"' : ""}><span class="ck ${t.done ? "on" : ""}">✓</span><span>${esc(t.t)}${lk ? ` <small>· se pasó la hora</small>` : ""}</span></button>` }).join("")}</div>${MLINE("Con 2 de 3 cuenta el paso. Lo que no terminaste, mañana tiene otra oportunidad.")}`;
+    c.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { if (x.dataset.late) { toast("Se pasó la hora de esta tarea"); haptic(); return } const t = j.tasks[+x.dataset.t]; t.done = !t.done; saveJ(); x.classList.toggle("on", t.done); x.querySelector(".ck").classList.toggle("on", t.done); if (t.done) { SFX.done(); haptic() } });
     nav.primary("Continuar", nextStep);
   },
   n_habits(c, nav) {
     const k = dayKey(0);
     c.classList.add("top");
-    c.innerHTML = `<p class="fl-eyebrow">Hábitos</p><h2 class="fl-title">¿Qué hábitos has cumplido hoy?</h2><div class="fields">${S.habits.map(h => `<button class="chk ${doneFor(k)[h.id] ? "on" : ""}" data-h="${h.id}"><span class="ck ${doneFor(k)[h.id] ? "on" : ""}">✓</span><span>${esc(h.name)}</span></button>`).join("") || `<p class="sub">Aún no tienes hábitos. Añádelos en Perfil.</p>`}</div>${MLINE("Somos lo que hacemos cada día. Con el 60 % cuenta el paso.")}`;
-    c.querySelectorAll("[data-h]").forEach(x => x.onclick = () => { const h = S.habits.find(z => z.id === x.dataset.h), was = !!doneFor(k)[h.id]; toggleHabit(h); x.classList.toggle("on", !was); x.querySelector(".ck").classList.toggle("on", !was); if (!was) { SFX.done(); haptic() } });
+    c.innerHTML = `<p class="fl-eyebrow">Hábitos</p><h2 class="fl-title">¿Qué hábitos has cumplido hoy?</h2><div class="fields">${S.habits.map(h => { const dn = !!doneFor(k)[h.id], lk = !dn && nowMin() > slotDeadline(hInfo(h).s); return `<button class="chk ${dn ? "on" : ""} ${lk ? "late" : ""}" data-h="${h.id}" ${lk ? 'data-late="1"' : ""}><span class="ck ${dn ? "on" : ""}">✓</span><span>${esc(h.name)} <small>· ${lk ? "se pasó la hora" : slotById(hInfo(h).s).n.toLowerCase()}</small></span></button>` }).join("") || `<p class="sub">Aún no tienes hábitos. Añádelos en Perfil.</p>`}</div>${MLINE("Somos lo que hacemos cada día. Con el 60 % cuenta el paso.")}`;
+    c.querySelectorAll("[data-h]").forEach(x => x.onclick = () => { if (x.dataset.late) { toast("Se pasó la hora de este hábito"); haptic(); return } const h = S.habits.find(z => z.id === x.dataset.h), was = !!doneFor(k)[h.id]; toggleHabit(h); x.classList.toggle("on", !was); x.querySelector(".ck").classList.toggle("on", !was); if (!was) { SFX.done(); haptic() } });
     nav.primary("Continuar", nextStep);
   },
   n_food(c, nav) {
     const j = J(); j.meals = j.meals || {}; c.classList.add("top");
     const draw = () => {
       const goal = waterGoal(), w = j.water || 0;
-      c.innerHTML = `<p class="fl-eyebrow">Comidas y agua</p><h2 class="fl-title">¿Cómo has comido hoy?</h2>${["desayuno", "comida", "cena"].map(m => `<div class="meal"><b>${m}</b><div class="seg3">${[["limpio", "Limpio"], ["regular", "Regular"], ["exceso", "Me pasé"]].map(([k, n]) => `<button data-m="${m}" data-v="${k}" class="${j.meals[m] === k ? "on" : ""}">${n}</button>`).join("")}</div></div>`).join("")}<div class="water"><div><p class="eyebrow">Agua</p><div class="n">${w}<span> de ${goal} vasos</span></div><div class="glasses">${Array.from({ length: goal }, (_, i) => `<i class="${i < w ? "on" : ""}"></i>`).join("")}</div></div><div class="pm"><button id="wm" aria-label="Quitar un vaso">−</button><button id="wp" aria-label="Añadir un vaso">+</button></div></div>`;
-      c.querySelectorAll("[data-m]").forEach(x => x.onclick = () => { SFX.tap(); j.meals[x.dataset.m] = j.meals[x.dataset.m] === x.dataset.v ? undefined : x.dataset.v; saveJ(); draw() });
-      $("wp").onclick = () => { tone(880 + (j.water || 0) * 40, .12, { v: .05 }); haptic(); j.water = (j.water || 0) + 1; saveJ(); draw() }; $("wm").onclick = () => { j.water = Math.max(0, (j.water || 0) - 1); saveJ(); draw() };
+      c.innerHTML = `<p class="fl-eyebrow">Comidas y agua</p><h2 class="fl-title">¿Cómo has comido hoy?</h2>${["desayuno", "comida", "cena"].map(m => { const ws = j.meals[m] ? "open" : winState(MEAL_WIN[m]()); return `<div class="meal ${ws !== "open" ? "late" : ""}"><b>${m} <small>${ws === "late" ? "· se pasó la hora" : ws === "early" ? "· desde las " + m2t(MEAL_WIN[m]()[0]) : "· hasta las " + m2t(MEAL_WIN[m]()[1])}</small></b><div class="seg3">${[["limpio", "Limpio"], ["regular", "Regular"], ["exceso", "Me pasé"]].map(([k, n]) => `<button data-m="${m}" data-v="${k}" class="${j.meals[m] === k ? "on" : ""}" ${ws !== "open" ? 'data-late="' + ws + '"' : ""}>${n}</button>`).join("")}</div></div>` }).join("")}<div class="water"><div><p class="eyebrow">Agua</p><div class="n">${w}<span> de ${goal} vasos</span></div><div class="glasses">${Array.from({ length: goal }, (_, i) => `<i class="${i < w ? "on" : ""}"></i>`).join("")}</div></div><div class="pm"><button id="wm" aria-label="Quitar un vaso">−</button><button id="wp" aria-label="Añadir un vaso">+</button></div></div>`;
+      c.querySelectorAll("[data-m]").forEach(x => x.onclick = () => { if (x.dataset.late) { toast(x.dataset.late === "late" ? "Se pasó la hora de esta comida" : "Aún no es la hora de esta comida"); haptic(); return } SFX.tap(); j.meals[x.dataset.m] = j.meals[x.dataset.m] === x.dataset.v ? undefined : x.dataset.v; saveJ(); draw() });
+      $("wp").onclick = () => { SFX.water(j.water || 0); haptic(); j.water = (j.water || 0) + 1; saveJ(); draw() }; $("wm").onclick = () => { j.water = Math.max(0, (j.water || 0) - 1); saveJ(); draw() };
     };
     draw(); nav.primary("Continuar", nextStep);
   },
@@ -602,7 +661,7 @@ const SHEETS = {
     footBtn(f, "Cerrar", closeSheet, "btn ghost");
   },
   guide(b, f) {
-    b.innerHTML = `<p class="eyebrow b">Cómo funciona Levo</p><h2 class="title">Tu mentor de disciplina</h2><p class="sub">Durante 100 días esculpes a la persona que quieres ser. Cada día, un golpe de cincel.</p>
+    b.innerHTML = `<p class="eyebrow b">Cómo funciona Levo</p><h2 class="title">Tu mentor de disciplina</h2><p class="sub">Durante 100 días esculpes a la persona que quieres ser. Cada día, un golpe de cincel.</p><p class="eyebrow" style="margin-top:8px">Las 5 pestañas</p>${tabsHTML()}<p class="eyebrow" style="margin-top:8px">Tu día</p>
       <div class="card guide"><b>1</b><div><h3>Rutina de la mañana · 6 min</h3><p class="sub">Despertar, respirar, abrir tu frase sellada y comprometerte con su acción, tus afirmaciones y tus 3 tareas.</p></div></div>
       <div class="card guide"><b>2</b><div><h3>Durante el día · 30 s</h3><p class="sub">Un check-in rápido para marcar hábitos, comidas y agua.</p></div></div>
       <div class="card guide"><b>3</b><div><h3>Rutina de la noche · 5 min</h3><p class="sub">Cierra tus tareas, examina tu día con tres preguntas, recibe la lección de tu mentor y prepara mañana.</p></div></div>
@@ -657,6 +716,8 @@ SHEETS.share = (b, f) => {
   const dl = () => { if (!blob) return; const a = document.createElement("a"); a.href = url; a.download = `levo-dia-${dayNum()}.png`; document.body.append(a); a.click(); a.remove() };
   footBtn(f, "Guardar imagen", dl, "btn ghost");
 };
+const TABS_INFO = [["hoy", "Hoy", "Lo que toca ahora, con un solo botón. Tu estatua, tu progreso del día y el foco de tu mentor."], ["dia", "Día", "Tu camino de 8 pasos y cada cosa a su mejor hora. Aquí añades tareas y hábitos."], ["mentor", "Mentor", "Una lección cada día, tu porqué y la biblioteca de frases."], ["estatua", "Galería", "Tu estatua en 3D, la colección de piezas, tus sellos y tu calendario."], ["perfil", "Perfil", "Tu hora de despertar, tus hábitos, los avisos y los ajustes."]];
+const tabsHTML = () => `<div class="tabsx">${TABS_INFO.map(([k, n, d]) => `<div><span class="emblem">${IC[k]}</span><div><b>${n}</b><p>${d}</p></div></div>`).join("")}</div><div class="tip"><span class="emblem sm">${IC.clock}</span><p><b>El tiempo manda.</b> Cada paso tiene su hora según el reloj de tu móvil: despertar hasta 2 h después de tu hora, la mañana hasta las ${m2t(MORNING_END())}, el examen desde las ${m2t(NIGHT_FROM)}. Si se pasa la hora, ya no se puede marcar: mañana es otra oportunidad.</p></div>`;
 const WHYS = [
   ["Cada acción es un voto", "No cambias de golpe: cambias por repetición. Cada paso pequeño es un voto por la persona que quieres ser."],
   ["Lo que se ve, se cumple", "Tu estatua hace visible un progreso que normalmente no ves. Ver que avanzas te da ganas de seguir."],
@@ -857,7 +918,7 @@ function renderGate(app) {
 function renderOnb(app) {
   const mine = h => S.habits.some(x => x.id.startsWith(h.id + "-") || x.name === h.name);
   const o = renderOnb.o = renderOnb.o || { step: 0, name: set().name || "", wake: set().wake || "05:00", goals: new Set(set().goals || []), why: set().why || "", who: set().who || "", look: set().look || "a", picks: new Set(HABITOS_ESTOICOS.filter(mine).map(h => h.id)) };
-  const N = 10, blue = o.step === 0 || o.step === N - 1;
+  const N = 11, blue = o.step === 0 || o.step === N - 1;
   let body = "", btn = "Continuar", ok = true, extra = "";
   const no = `<p class="bigno">${pad(o.step + 1)} / ${N}</p>`;
   if (o.step === 0) { body = `${no}<h1 class="title xl">Tu mentor de disciplina</h1><p class="sub" style="max-width:24ch">Durante 100 días vas a esculpir a la persona que quieres ser. Cada día, un golpe de cincel.</p><div style="flex:1;min-height:150px"></div><input id="on" placeholder="¿Cómo te llamas?" maxlength="18" value="${esc(o.name)}">`; btn = "Empezar"; extra = `<div class="ostage">${statueSVG(0, "", 0, o.look)}</div>` }
@@ -873,8 +934,9 @@ function renderOnb(app) {
     body = `${no}<h1 class="title">Tus hábitos</h1><p class="sub">Elige de 3 a 5. Arriba, los que más te ayudan con lo que quieres transformar.</p><div class="fields">${list.map(h => `<button class="hab ${o.picks.has(h.id) ? "on" : ""}" data-p="${h.id}"><span class="ck ${o.picks.has(h.id) ? "on" : ""}">✓</span><span style="color:var(--fg)">${esc(h.name)}${sug.has(h.id) ? ` <small style="color:var(--blue);font-weight:700">· recomendado</small>` : ""}</span></button>`).join("")}</div>`;
   }
   if (o.step === 8) body = `${no}<h1 class="title">Así será cada día</h1><p class="sub">Dos rutinas guiadas, paso a paso. Con 6 de los 8 pasos, el día queda esculpido.</p><div class="card guide"><b>☀</b><div><h3>Mañana · 6 min</h3><p class="sub">Despertar a las ${o.wake}, respirar, tu frase sellada, afirmaciones y 3 tareas.</p></div></div><div class="card guide"><b>◐</b><div><h3>Durante el día · 30 s</h3><p class="sub">Hábitos, comidas y agua.</p></div></div><div class="card guide"><b>☾</b><div><h3>Noche · 5 min</h3><p class="sub">Cierra tus tareas, examina tu día, la lección de tu mentor y prepara mañana.</p></div></div>`;
-  if (o.step === 9) { body = `${no}<h1 class="title xl">El pacto</h1><p class="pact">Yo, <em>${esc(o.name || "yo")}</em>, me comprometo a esculpir a alguien que <em>${esc(o.who || "cumple lo que se promete")}</em> durante 100 días. Cuando caiga, me levantaré.</p><div style="flex:1"></div>`; extra = `<div class="ostage" style="opacity:.22;bottom:190px">${statueSVG(0, "", 0, o.look)}</div>` }
-  const foot = o.step === 9 ? `<button class="holdbtn" id="sign"><span class="fill"></span><span class="lbl">Mantén pulsado para firmar</span></button><p class="holdhint">Es tu palabra. Siente el latido.</p><button class="link center" id="oback">Atrás</button>`
+  if (o.step === 9) body = `${no}<h1 class="title">Tu app, en 5 pestañas</h1><p class="sub">Abajo tienes cinco pestañas. Esto es lo que hace cada una.</p>${tabsHTML()}`;
+  if (o.step === 10) { body = `${no}<h1 class="title xl">El pacto</h1><p class="pact">Yo, <em>${esc(o.name || "yo")}</em>, me comprometo a esculpir a alguien que <em>${esc(o.who || "cumple lo que se promete")}</em> durante 100 días. Cuando caiga, me levantaré.</p><div style="flex:1"></div>`; extra = `<div class="ostage" style="opacity:.22;bottom:190px">${statueSVG(0, "", 0, o.look)}</div>` }
+  const foot = o.step === 10 ? `<button class="holdbtn" id="sign"><span class="fill"></span><span class="lbl">Mantén pulsado para firmar</span></button><p class="holdhint">Es tu palabra. Siente el latido.</p><button class="link center" id="oback">Atrás</button>`
     : `<button class="btn" id="onext" ${ok ? "" : "disabled"}>${btn}</button>${o.step ? `<button class="link center" id="oback">Atrás</button>` : ""}`;
   app.innerHTML = `<div class="onb ${blue ? "blue" : ""}">${extra}<div class="prog">${Array.from({ length: N }, (_, i) => `<i class="${i <= o.step ? "on" : ""}"></i>`).join("")}</div><div class="body">${body}</div><div class="foot">${foot}</div></div>`;
   const re = () => renderOnb(app);
@@ -892,7 +954,7 @@ function renderOnb(app) {
   if ($("onext")) $("onext").onclick = () => { SFX.tap(); haptic(); o.step++; window.scrollTo(0, 0); re() };
   if ($("sign")) bindHold($("sign"), 2200, () => {
     const keepStart = set().v2 && set().start;
-    S.set = { ...S.set, v2: true, v3: true, name: o.name, wake: o.wake, goals: [...o.goals], why: o.why.trim(), who: o.who.trim(), look: o.look, start: keepStart || dayKey(0), pactAt: new Date().toISOString(), fav: S.set.fav || [] };
+    S.set = { ...S.set, v2: true, v3: true, seenTabs: true, name: o.name, wake: o.wake, goals: [...o.goals], why: o.why.trim(), who: o.who.trim(), look: o.look, start: keepStart || dayKey(0), pactAt: new Date().toISOString(), fav: S.set.fav || [] };
     const had = new Set(HABITOS_ESTOICOS.filter(mine).map(h => h.id)), same = had.size === o.picks.size && [...o.picks].every(id => had.has(id));
     if (!same) {
       const old = S.habits.map(h => h.id);

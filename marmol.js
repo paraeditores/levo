@@ -30,7 +30,7 @@ function blockGeometry(w, h, d) {
     const y = p.getY(i), xx = p.getX(i), zz = p.getZ(i);
     if (y > h - .001) p.setY(i, y + (rnd() - .5) * .5);                                   /* cara de arriba, tallada a golpes */
     const edge = Math.abs(Math.abs(xx) - w / 2) < .001 || Math.abs(Math.abs(zz) - d / 2) < .001;
-    if (edge) { p.setX(i, xx + (rnd() - .5) * .05); p.setZ(i, zz + (rnd() - .5) * .05) }  /* caras laterales, irregulares */
+    if (edge && y > h - .5) { p.setX(i, xx + (rnd() - .5) * .04); p.setZ(i, zz + (rnd() - .5) * .04) }  /* caras laterales, irregulares */
   }
   g.computeVertexNormals(); return g;
 }
@@ -57,13 +57,13 @@ async function init() {
   head.position.x -= c.x; head.position.z -= c.z; head.position.y -= box.min.y;
   box = new THREE.Box3().setFromObject(bust); size = box.getSize(new V3());
   /* pedestal */
-  const pm = new THREE.MeshStandardMaterial({ color: 0x202020, roughness: .6 });
+  const pm = new THREE.MeshStandardMaterial({ color: 0x2c2c2c, roughness: .5 });
   const p1 = new THREE.Mesh(new THREE.BoxGeometry(size.x * 1.6, .32, size.z * 1.5), pm); p1.position.y = -.16; world.add(p1);
   const p2 = new THREE.Mesh(new THREE.BoxGeometry(size.x * 1.45, .9, size.z * 1.35), new THREE.MeshStandardMaterial({ color: 0x141414, roughness: .7 })); p2.position.y = -.77; world.add(p2);
   /* el bloque que envuelve la figura: baja con cada día esculpido; lo que queda por debajo del pedestal se recorta */
   clip = new THREE.Plane(new V3(0, 1, 0), 0);
-  blockMat = new THREE.MeshStandardMaterial({ color: 0xa9a9a9, roughness: 1, flatShading: true, clippingPlanes: [clip], side: THREE.DoubleSide, map: marbleTexture() });
-  block = new THREE.Mesh(blockGeometry(size.x * 1.16, H + .5, size.z * 1.12), blockMat); world.add(block);
+  blockMat = new THREE.MeshStandardMaterial({ color: 0xb4b4b4, roughness: .9, flatShading: true, clippingPlanes: [clip], side: THREE.DoubleSide, map: marbleTexture() });
+  block = new THREE.Mesh(blockGeometry(size.x * 1.08, H + .5, size.z * 1.04), blockMat); world.add(block);
   /* laurel de plata para la fase final */
   laurel = new THREE.Group(); const lm = new THREE.MeshStandardMaterial({ color: 0xdedede, metalness: .9, roughness: .28 });
   const rr = size.x * .47; laurel.add(new THREE.Mesh(new THREE.TorusGeometry(rr, .025, 8, 64), lm));
@@ -98,7 +98,7 @@ function loop() {
     world.rotation.y = rotY; world.position.y = Math.sin(t * .9) * .025;           /* respiración */
     clip.constant = -world.position.y;
     const la = t * .35; keyL.position.set(Math.cos(la) * 5, 3.2, Math.sin(la) * 5 + 3);   /* la luz orbita y recorre el mármol */
-    shake *= .9; cam.position.set((Math.random() - .5) * shake, 1.7 + (Math.random() - .5) * shake, 8.3); cam.lookAt(0, 1.35, 0);
+    shake *= .9; cam.position.set((Math.random() - .5) * shake, 1.9 + (Math.random() - .5) * shake, 10.6); cam.lookAt(0, 1.3, 0);
     if (dust) { const p = dust.geometry.attributes.position, v = dust.userData.v; dust.userData.life -= .016; for (let i = 0; i < v.length; i++) { v[i].y -= .006; p.setXYZ(i, p.getX(i) + v[i].x, p.getY(i) + v[i].y, p.getZ(i) + v[i].z) } p.needsUpdate = true; dust.material.opacity = Math.max(0, dust.userData.life); if (dust.userData.life <= 0) { world.remove(dust); dust = null } }
     R.render(scene, cam); raf = requestAnimationFrame(step);
   };
@@ -110,7 +110,7 @@ window.Statue3D = {
   /* Coloca la escultura en el contenedor; el SVG queda debajo como respaldo */
   mount(el, { days = 0, stage: st = 0 } = {}) {
     if (!ok || !el) return false;
-    const target = Math.pow(Math.min(1, Math.max(0, days) / 50), .75);
+    const target = Math.max(.1, Math.pow(Math.min(1, Math.max(0, days) / 50), .75));
     if (host !== el) { e = Math.max(0, target - .06); host = el; el.append(R.domElement); el.classList.add("has3d") }
     eT = target; stage = st; apply(); size(); loop(); return true;
   },
@@ -121,7 +121,8 @@ window.Statue3D = {
     for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - .5) * 1.8; pos[i * 3 + 1] = Math.max(.1, top); pos[i * 3 + 2] = (Math.random() - .5) * 1.4; v.push(new V3((Math.random() - .5) * .05, .03 + Math.random() * .05, (Math.random() - .5) * .05)) }
     const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     if (dust) world.remove(dust);
-    dust = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xeeeeee, size: .07, transparent: true, opacity: 1, depthWrite: false })); dust.userData = { v, life: 1.3 }; world.add(dust);
+    const col = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const r = Math.random(), c = r < .15 ? [1, .23, .19] : r < .3 ? [.18, .42, 1] : [.93, .93, .93]; col.set(c, i * 3) } g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    dust = new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, size: .08, transparent: true, opacity: 1, depthWrite: false })); dust.userData = { v, life: 1.3 }; world.add(dust);
     eT = Math.min(1, eT + .015);
   },
   ready,

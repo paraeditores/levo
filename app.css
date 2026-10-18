@@ -1,16 +1,14 @@
 /* Levo · Blanco y negro. Pocos estímulos, mucho espacio, movimiento lento.
    Una sola familia (Archivo) en pesos finos; el único acento es el propio contraste. Negro por defecto en modo oscuro; se invierte en modo claro. */
 :root{
-  --bg:#000; --fg:#fff; --s1:#0c0c0c; --s2:#191919; --mid:rgba(255,255,255,.6); --faint:rgba(255,255,255,.26); --line:rgba(255,255,255,.12);
+  --bg:#000; --fg:#fff; --s1:#0c0c0c; --s2:#191919; --mid:rgba(255,255,255,.68); --faint:rgba(255,255,255,.34); --line:rgba(255,255,255,.16);
   --blue:var(--fg); --blue-t:rgba(255,255,255,.07); --muted:var(--mid);
+  --red:#ff3b30; --azul:#2f6bff; --red-t:rgba(255,59,48,.35); --azul-t:rgba(47,107,255,.35);
   --font:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   --tab:calc(60px + env(safe-area-inset-bottom,0px)); --gx:max(22px,env(safe-area-inset-left,0px));
   --ease:cubic-bezier(.22,.61,.36,1); --slow:cubic-bezier(.16,1,.3,1);
   color-scheme:dark;
 }
-@media (prefers-color-scheme:light){:root{
-  --bg:#fff; --fg:#000; --s1:#f6f6f6; --s2:#ececec; --mid:rgba(0,0,0,.58); --faint:rgba(0,0,0,.26); --line:rgba(0,0,0,.1); --blue-t:rgba(0,0,0,.05);
-  color-scheme:light}}
 *{box-sizing:border-box}
 html{overflow-x:hidden}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.5;font-weight:400;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;transition:background .6s var(--ease)}
@@ -194,7 +192,6 @@ textarea{resize:none;min-height:56px;line-height:1.45}
 .holdbtn{position:relative;overflow:hidden;min-height:56px;border-radius:28px;box-shadow:inset 0 0 0 1px var(--fg);color:var(--fg);font-size:15px;font-weight:400;width:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .holdbtn .fill{position:absolute;inset:0;background:var(--fg);transform-origin:left;transform:scaleX(0)}
 .holdbtn .lbl{position:relative;display:flex;align-items:center;justify-content:center;padding:0 16px;mix-blend-mode:difference;color:#fff}
-@media (prefers-color-scheme:light){.holdbtn .lbl{color:#fff}}
 .holdhint{font-size:12.5px;color:var(--mid);text-align:center;margin:-4px 0 0}
 
 /* --- campos y piezas comunes --- */
@@ -293,7 +290,6 @@ textarea{resize:none;min-height:56px;line-height:1.45}
 .gpic{position:relative;width:100%}
 .gpic svg{display:block;width:100%;height:auto}
 .gcard.locked .gpic svg,.gpic.locked svg,.piecebig.locked svg{filter:brightness(0) invert(var(--inv,1)) opacity(.14)}
-@media (prefers-color-scheme:light){:root{--inv:0}}
 .glock{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:11px;font-weight:300;color:var(--mid);letter-spacing:.04em}
 .piecebig{width:min(64%,250px)}
 .piecebig svg{width:100%;height:auto;display:block}
@@ -432,3 +428,49 @@ textarea{resize:none;min-height:56px;line-height:1.45}
 /* --- el check se dibuja --- */
 .it.fresh .itck{animation:nodein .6s var(--slow)}
 .it.fresh .itck svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:draw .7s .1s var(--ease) forwards}
+
+/* --- acentos en movimiento --- */
+.holdbtn .fill{background:var(--red)}
+.holdbtn .lbl{mix-blend-mode:normal;color:var(--fg)}
+.holdbtn.on{box-shadow:inset 0 0 0 1px var(--red),0 0 40px var(--red-t)}
+.breath .orb{box-shadow:inset 0 0 0 1px var(--azul),0 0 60px var(--azul-t);background:radial-gradient(circle,rgba(47,107,255,.35),transparent 70%)}
+.node.now{box-shadow:inset 0 0 0 1px var(--azul);color:var(--fg)}
+.node.now::after{border-color:var(--azul)}
+.now-pill{background:var(--azul);color:#fff}
+.tabind{background:var(--red);height:2px;box-shadow:0 0 12px var(--red-t)}
+.fl-prog i.cur::after{background:var(--azul);opacity:1}
+.fdots i.on::after,.line b{background:var(--azul);box-shadow:0 0 10px var(--azul-t)}
+.ripple{background:var(--azul);opacity:.4}
+.btn .ripple{background:var(--azul);opacity:.5}
+.dots i.on{animation:dotin 1.4s var(--slow) both}
+@keyframes dotin{0%{background:var(--azul);box-shadow:0 0 14px var(--azul);transform:scale(1.6)}100%{background:var(--fg);transform:none}}
+.it.fresh .itck{animation:checkin 1.2s var(--slow) both}
+@keyframes checkin{0%{background:var(--azul);box-shadow:0 0 18px var(--azul);transform:scale(1.25)}100%{background:var(--fg)}}
+.chk .ck.on{animation:checkin 1s var(--slow) both}
+.shock{border-color:var(--red)}
+.bigseal{box-shadow:inset 0 0 0 1px var(--fg),0 0 50px rgba(255,59,48,.18)}
+.moment .rays{background:radial-gradient(circle,rgba(47,107,255,.32),rgba(255,59,48,.08) 38%,transparent 62%)}
+.moment .rays::before{border-color:var(--red);opacity:.6}
+.moment .rays::after{border-color:var(--azul);opacity:.6}
+.moment .big span{animation:letterc .9s var(--slow) both}
+@keyframes letterc{0%{opacity:0;transform:translateY(14px);filter:blur(6px);color:var(--azul)}60%{color:var(--azul)}100%{color:var(--fg)}}
+.aura::before{border-color:rgba(47,107,255,.35)}
+.aura::after{border-color:rgba(255,59,48,.25)}
+.sealm{box-shadow:inset 0 0 0 1px var(--red);color:var(--fg)}
+/* --- la escultura 3D se funde con el fondo: sin bordes --- */
+.stage .m3d{-webkit-mask-image:radial-gradient(ellipse 70% 66% at 50% 46%,#000 58%,transparent 100%);mask-image:radial-gradient(ellipse 70% 66% at 50% 46%,#000 58%,transparent 100%)}
+.gcard.locked .gpic svg,.gpic.locked svg,.piecebig.locked svg{filter:brightness(0) invert(1) opacity(.18)}
+
+/* --- el tiempo manda --- */
+.it.late{opacity:.42}
+.it.late .itck{box-shadow:inset 0 0 0 1px var(--line);color:var(--mid)}
+.node.late{opacity:.35}
+.chk.late,.meal.late{opacity:.4}
+.chk small,.meal small{font-size:12px;color:var(--mid);font-weight:300;text-transform:none}
+.lockic{width:64px;height:64px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--red);display:grid;place-items:center;color:var(--red)}
+.lockic svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+/* --- las pestañas explicadas --- */
+.tabsx{display:grid}
+.tabsx > div{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.tabsx b{font-weight:400;font-size:16px}
+.tabsx p{margin:2px 0 0;color:var(--mid);font-size:14px;font-weight:300;line-height:1.45}
