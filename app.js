@@ -136,7 +136,9 @@ function renderMain(app) {
   if (!$("view")) app.innerHTML = `<main id="view"></main><nav class="tabbar" aria-label="Secciones">${TABS.map(([k, n]) => `<button data-tab="${k}">${IC[k]}${n}</button>`).join("")}</nav>`;
   app.querySelectorAll("[data-tab]").forEach(b => { b.setAttribute("aria-selected", b.dataset.tab === S.tab); b.onclick = () => { if (S.tab !== b.dataset.tab) SFX.tap(); S.tab = b.dataset.tab; window.scrollTo(0, 0); renderMain(app) } });
   const v = $("view"); v.className = "wrap";
+  S.animate = S.lastTab !== S.tab; S.lastTab = S.tab;
   ({ hoy: renderHoy, mentor: renderMentor, estatua: renderEstatua, perfil: renderPerfil })[S.tab](v);
+  if (S.animate) { v.classList.add("anim"); [...v.children].forEach((c, i) => { c.classList.add("rise"); c.style.setProperty("--i", Math.min(i, 8)) }) } else v.classList.remove("anim");
 }
 
 /* ================= HOY ================= */
@@ -145,14 +147,18 @@ function heroHTML() {
   return `<section class="hero">
     <div class="bar-top"><span class="wordmark">LEVO</span><button class="help" id="help" aria-label="Cómo funciona Levo">?</button></div>
     <div class="hgrid">
-      <div class="hleft"><div class="daynum"><span>DÍA</span><b class="${d >= 100 ? "d3" : ""}">${d}</b><small>DE 100</small></div>
+      <div class="hleft"><div class="daynum"><span>DÍA</span><b class="${d >= 100 ? "d3" : ""}" data-count="${d}">${d}</b><small>DE 100</small></div>
         <p class="hphase">${esc(fz.name)}</p><p class="hphase-sub">${nx ? `Faltan ${nx[0] - sc} ${nx[0] - sc === 1 ? "día esculpido" : "días esculpidos"} para «${esc(nx[1])}»` : "Obra terminada. Cuídala cada día."}</p></div>
       <div class="stage" id="stage"><div class="beat"><b></b><i></i><i></i></div>${myStatue(sc)}</div>
-    </div>
-    <div class="today"><div class="tt"><span>Hoy llevas</span><b>${n} de 8 pasos</b></div><div class="segs">${ORDER.map((_, i) => `<i class="${i < n ? "on" : ""} ${i === 5 ? "six" : ""}"></i>`).join("")}</div>
+    </div>${dustHTML()}
+    <div class="today"><div class="tt"><span>Hoy llevas</span><b>${n} de 8 pasos</b></div><div class="segs">${ORDER.map((_, i) => `<i class="${i < n ? "on" : ""} ${i === 5 ? "six" : ""}" style="--i:${i}"></i>`).join("")}</div>
       <small>${n >= 6 ? "Día esculpido. Lo que hagas ahora es pulir." : `Con 6 pasos tu estatua sale un poco más del bloque. Te ${6 - n === 1 ? "falta 1" : `faltan ${6 - n}`}.`}</small></div>
   </section>`;
 }
+const _r = k => { const v = Math.sin(k * 91.7 + 13.3) * 43758.5453; return v - Math.floor(v) };
+const dustHTML = () => `<div class="dust" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="left:${(_r(i) * 100).toFixed(1)}%;width:${(2 + _r(i + 40) * 3).toFixed(1)}px;height:${(2 + _r(i + 40) * 3).toFixed(1)}px;animation-duration:${(6 + _r(i + 9) * 7).toFixed(1)}s;animation-delay:-${(_r(i + 3) * 9).toFixed(1)}s"></i>`).join("")}</div>`;
+function countUps(root) { root.querySelectorAll("[data-count]").forEach(el => { const to = +el.dataset.count; if (SHOT || matchMedia("(prefers-reduced-motion: reduce)").matches || !S.animate) { el.textContent = to; return } const t0 = performance.now(), ms = 1100; const step = now => { const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 4); el.textContent = Math.round(to * e); if (p < 1) requestAnimationFrame(step) }; el.textContent = 0; requestAnimationFrame(step) }) }
+function tilt(hero) { const st = hero.querySelector(".stage"); if (!st) return; hero.addEventListener("pointermove", e => { const r = hero.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; st.style.setProperty("--ry", (x * 14).toFixed(2) + "deg"); st.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg") }); hero.addEventListener("pointerleave", () => { st.style.setProperty("--ry", "0deg"); st.style.setProperty("--rx", "0deg") }) }
 function mentorLine() {
   const k = dayKey(0), st = steps(k), n = nDone(k), hr = new Date().getHours(), d = dayNum(), why = set().why;
   const yRit = d > 1 && isRitual(dayKey(-1)), two = d > 2 && !isRitual(dayKey(-1)) && !isRitual(dayKey(-2));
@@ -191,16 +197,17 @@ function stepStatus(key) {
 }
 function renderHoy(v) {
   const L = leccion(dayNum());
-  v.innerHTML = heroHTML() + `<button class="card mentor" id="mentorCard"><span class="emblem">${IC.mentor}</span><span><p class="eyebrow">Tu mentor</p><p class="ml">${mentorLine()}</p><span class="les">Lección ${dayNum()}: ${esc(L.t)} →</span></span></button>` + fraseHTML()
+  v.innerHTML = heroHTML() + `<button class="card mentor" id="mentorCard"><span class="emblem">${IC.mentor}</span><span><p class="eyebrow">Tu mentor</p><p class="ml">${mentorLine()}</p><span class="les">${J().lesson ? "✓ " : ""}Lección ${dayNum()}: ${esc(L.t)} →</span></span></button>` + fraseHTML()
     + `<div class="sec-h"><div><p class="eyebrow b">Tu camino de hoy</p><h2 class="title">8 pasos</h2></div><p class="sub" style="text-align:right;max-width:50%;font-size:14px">Toca un paso para hacerlo. Con 6, el día cuenta.</p></div><div class="trail" id="trail"></div>`;
   $("help").onclick = () => { SFX.tap(); openSheet("guide") };
   $("mentorCard").onclick = () => { SFX.tap(); S.tab = "mentor"; window.scrollTo(0, 0); renderMain($("app")) };
   bindFrase();
   drawTrail();
+  countUps(v); tilt(v.querySelector(".hero"));
 }
 function bindFrase() {
   if ($("openSeal")) $("openSeal").onclick = () => {
-    SFX.seal(); haptic(2); const ic = $("sealIc"); if (ic) ic.classList.add("opening");
+    SFX.seal(); haptic(2); const ic = $("sealIc"); if (ic) { ic.classList.add("opening"); const w = document.createElement("span"); w.className = "shock"; ic.parentElement.style.position = "relative"; ic.parentElement.append(w) }
     setTimeout(() => { J().open = true; saveJ(); $("frase").outerHTML = fraseHTML(); bindFrase(); $("frase").animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 500, easing: "ease-out" }) }, 520);
   };
   if ($("hold")) bindHold($("hold"), 1700, () => { const p = snapshot(); J().commit = true; saveJ(); renderHoy($("view")); celebrate(p, "Compromiso firmado") });
@@ -217,17 +224,17 @@ function drawTrail() {
   let svg = "", chev = "";
   all.forEach((p, i) => {
     if (!i) return; const a = all[i - 1], doneSeg = st[ORDER[i - 1]] && (i === 8 ? isRitual(k) : st[ORDER[i]]);
-    svg += `<path d="${seg(a, p)}" fill="none" stroke="${doneSeg ? "var(--blue)" : "var(--faint)"}" stroke-opacity="${doneSeg ? 1 : .6}" stroke-width="${doneSeg ? 4 : 2.5}" stroke-linecap="round" ${doneSeg ? "" : 'stroke-dasharray="2 9"'}/>`;
+    svg += `<path d="${seg(a, p)}" ${doneSeg ? `class="dn" pathLength="1" style="--i:${i}"` : ""} fill="none" stroke="${doneSeg ? "var(--blue)" : "var(--faint)"}" stroke-opacity="${doneSeg ? 1 : .6}" stroke-width="${doneSeg ? 4 : 2.5}" stroke-linecap="round" ${doneSeg ? "" : 'stroke-dasharray="2 9"'}/>`;
     const mx = (a[0] + p[0]) / 2, my = (a[1] + p[1]) / 2, ang = Math.atan2(p[1] - a[1], p[0] - a[0]) * 180 / Math.PI - 90;
     chev += `<path d="M-6 -3L0 3L6 -3" transform="translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${ang.toFixed(0)})" fill="none" stroke="var(--blue)" stroke-opacity=".55" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
   let html = `<svg class="tr" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg}${chev}</svg>`;
   ORDER.forEach((key, i) => {
     const [x, y] = P[i], done = st[key], isNow = i === now, left = XS[i] >= .5;
-    html += `<button class="node ${done ? "done" : ""} ${isNow ? "now" : ""}" data-step="${key}" style="left:${x}px;top:${y}px" aria-label="${i + 1}. ${NAME[key]}: ${esc(stepStatus(key))}">${done ? IC.check : IC[key]}<span class="num">${i + 1}</span></button>`;
+    html += `<button class="node ${done ? "done" : ""} ${isNow ? "now" : ""}" data-step="${key}" style="left:${x}px;top:${y}px;--i:${i}" aria-label="${i + 1}. ${NAME[key]}: ${esc(stepStatus(key))}">${done ? IC.check : IC[key]}<span class="num">${i + 1}</span></button>`;
     html += `<button class="nlabel ${left ? "l" : "r"}" data-step="${key}" style="top:${y}px;${left ? `right:${W - x + 42}px` : `left:${x + 42}px`}" tabindex="-1">${isNow ? `<span class="now-pill">Ahora</span>` : ""}<b>${NAME[key]}</b><small>${esc(stepStatus(key))}</small></button>`;
   });
-  html += `<div class="goal" style="left:${goal[0]}px;top:${goal[1] - 20}px"><div class="gm">${myStatue()}</div><p>${isRitual(k) ? "Hoy ya has esculpido" : "Con 6 pasos, tu estatua avanza"}</p></div>`;
+  html += `<div class="goal" style="left:${goal[0]}px;top:${goal[1] - 20}px"><div class="gm">${myStatue()}</div><p>${isRitual(k) ? "Hoy ya has esculpido" : "Con 6 pasos, tu estatua avanza"}${nextPiece() ? `<br><span style="color:var(--blue)">Próxima pieza: ${esc(nextPiece().n)} en ${nextPiece().d - sculpted()} ${nextPiece().d - sculpted() === 1 ? "día" : "días"}</span>` : ""}</p></div>`;
   t.innerHTML = html;
   t.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { SFX.tap(); const key = b.dataset.step; if (key === "frase") { const f = $("frase"); f.scrollIntoView({ behavior: "smooth", block: "center" }); f.animate([{ boxShadow: "0 0 0 4px var(--blue)" }, { boxShadow: "0 0 0 0 transparent" }], { duration: 1400 }) } else openSheet(key) });
 }
@@ -261,15 +268,17 @@ function celebrate(p, label) {
   const now = snapshot(), newly = ORDER.filter(k => !p.st[k] && now.st[k]);
   if (newly.length) { SFX.chisel(); haptic(2); setTimeout(() => burst($("stage")), 60); toast(`${label || NAME[newly[newly.length - 1]] + ": hecho"} · ${now.n} de 8`) }
   const fN = faseDe(now.sc), fP = faseDe(p.sc);
-  let m = null;
-  if (fN.i > fP.i) m = { big: "Nueva forma", title: fN.name, text: fN.txt };
-  else if (!p.rit && now.rit) m = { big: "Día esculpido", title: `Día ${dayNum()}`, text: `${now.n} de 8 pasos. Tu estatua ha salido un poco más del bloque.` };
-  else if (now.n === 8 && p.n < 8) m = { big: "Día completo", title: "8 de 8", text: "Hoy has cumplido todo lo que te prometiste." };
-  if (m) setTimeout(() => moment(m), 1000);
+  const q = [];
+  if (fN.i > fP.i) q.push({ big: "Nueva forma", title: fN.name, text: fN.txt });
+  else if (!p.rit && now.rit) q.push({ big: "Día esculpido", title: `Día ${dayNum()}`, text: `${now.n} de 8 pasos. Tu estatua ha salido un poco más del bloque.` });
+  else if (now.n === 8 && p.n < 8) q.push({ big: "Día completo", title: "8 de 8", text: "Hoy has cumplido todo lo que te prometiste." });
+  GALERIA.forEach(pc => { if (pc.d > p.sc && pc.d <= now.sc) q.push({ big: "Nueva pieza", title: pc.n, text: pc.t + " Ya está en tu galería.", svg: pieceSVG(pc), piece: true }) });
+  if (q.length) setTimeout(() => momentQueue(q), 1000);
 }
-function moment({ big, title, text, btn = "Seguir", days = sculpted(), onClose }) {
-  const el = document.createElement("div"); el.className = "moment"; el.setAttribute("role", "dialog");
-  el.innerHTML = `<div class="mstage" id="mst">${statueSVG(faseDe(days).i, set().name, days, look())}</div><p class="big">${big}</p><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn white" id="mok">${btn}</button>`;
+const momentQueue = q => { if (!q.length) return; const m = q.shift(); moment({ ...m, onClose: () => setTimeout(() => momentQueue(q), 250) }) };
+function moment({ big, title, text, btn = "Seguir", days = sculpted(), onClose, svg, piece }) {
+  const el = document.createElement("div"); el.className = "moment" + (piece ? " piece" : ""); el.setAttribute("role", "dialog");
+  el.innerHTML = `<div class="mstage" id="mst"><div class="rays"></div>${svg || statueSVG(faseDe(days).i, set().name, days, look())}</div><p class="big">${big}</p><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn white" id="mok">${btn}</button>`;
   document.body.append(el); SFX.sculpt(); haptic(3);
   setTimeout(() => burst($("mst"), true), 250);
   $("mok").onclick = () => { SFX.tap(); el.remove(); if (onClose) onClose() };
@@ -397,6 +406,25 @@ const SHEETS = {
     footBtn(f, "Guardar", () => { const h = parseFloat($("bh").value) || null, kg = parseFloat(($("bw").value || "").replace(",", ".")) || null; S.bodyP = { height_cm: h, weight_kg: kg, goal: $("bg").value }; write(() => sb.from("body_profile").upsert({ user_id: S.uid, ...S.bodyP, updated_at: new Date().toISOString() }, { onConflict: "user_id" })); if (kg) { const k = dayKey(0); S.weighs = S.weighs.filter(x => x.day !== k).concat([{ day: k, kg }]); write(() => sb.from("weighins").upsert({ user_id: S.uid, day: k, kg }, { onConflict: "user_id,day" })) } toast("Guardado."); closeSheet() });
   },
 };
+SHEETS.share = (b, f) => {
+  let kind = "story", blob = null, url = "";
+  const shareText = `Día ${dayNum()} de 100 esculpiendo mi mejor versión con Levo.`;
+  const draw = async () => {
+    b.innerHTML = `<h2 class="title">Comparte tu estatua</h2><p class="sub">Tu progreso puede despertar a alguien más. Elige el formato y compártelo.</p><div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))">${[["story", "Historia"], ["post", "Publicación"]].map(([k, n]) => `<button data-k="${k}" aria-selected="${kind === k}">${n}</button>`).join("")}</div><div class="sharepv ${kind}"><div class="spin">Esculpiendo tu imagen…</div></div>`;
+    b.querySelectorAll("[data-k]").forEach(x => x.onclick = () => { if (kind === x.dataset.k) return; kind = x.dataset.k; SFX.tap(); draw() });
+    blob = await shareCanvas(kind); if (url) URL.revokeObjectURL(url); url = URL.createObjectURL(blob);
+    const pv = b.querySelector(".sharepv"); if (pv) pv.innerHTML = `<img src="${url}" alt="Tu tarjeta para compartir">`;
+  };
+  draw();
+  footBtn(f, "Compartir", async () => {
+    if (!blob) return toast("Un segundo, se está preparando la imagen.");
+    const file = new File([blob], `levo-dia-${dayNum()}.png`, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text: shareText }); SFX.done() } catch (e) { if (e && e.name !== "AbortError") toast("No se pudo abrir el menú de compartir.") } return }
+    toast("Tu navegador no permite compartir directamente: la guardo como imagen."); dl();
+  });
+  const dl = () => { if (!blob) return; const a = document.createElement("a"); a.href = url; a.download = `levo-dia-${dayNum()}.png`; document.body.append(a); a.click(); a.remove() };
+  footBtn(f, "Guardar imagen", dl, "btn ghost");
+};
 const WHYS = [
   ["Cada acción es un voto", "No cambias de golpe: cambias por repetición. Cada paso pequeño es un voto por la persona que quieres ser."],
   ["Lo que se ve, se cumple", "Tu estatua hace visible un progreso que normalmente no ves. Ver que avanzas te da ganas de seguir."],
@@ -405,27 +433,54 @@ const WHYS = [
 
 /* ================= MENTOR ================= */
 function openedDays() { const out = []; for (let o = 0; dayKey(o) >= START() && o > -800; o--) { const k = dayKey(o); if (S.journal[k] && S.journal[k].open) out.push(k) } return out }
+const lessonDay = n => { const d = new Date(START() + "T12:00"); d.setDate(d.getDate() + n - 1); return fmt(d) };
+const lessonsDone = () => Object.values(S.journal).filter(j => j && j.lesson).length;
 function renderMentor(v) {
-  const d = dayNum(), L = leccion(d), j = J(), fav = (set().fav || []).map(x => typeof x === "number" ? "s" + x : x);
+  const d = dayNum(), L = leccion(d), j = J(), fav = (set().fav || []).map(x => typeof x === "number" ? "s" + x : x), done = !!j.lesson;
   const qc = (q, date) => `<article class="card qcard">${date ? `<p class="eyebrow">${date}</p>` : ""}<p class="quote">${esc(q.t)}</p><p class="eyebrow">— ${esc(q.a)}</p>${q.acc ? `<div class="accbox"><p class="eyebrow">Acción</p><p>${esc(q.acc)}</p></div>` : ""}<button class="fav ${fav.includes(q.id) ? "on" : ""}" data-fav="${q.id}" aria-label="Guardar">${fav.includes(q.id) ? "★" : "☆"}</button></article>`;
+  const HELP = { lecciones: "Todas las lecciones que ya has recibido, con lo que respondiste cada día.", frases: "Las frases selladas que has ido abriendo en Hoy, con su acción.", favs: "Las frases que has marcado con ☆ para releerlas." };
   let list = "";
-  if (S.mTab === "lecciones") {
-    const nx = leccion(d + 1);
-    list = `<div class="card lrow locked"><div class="lt"><b>${d + 1}</b><span>Mañana: ${esc(nx.t)}</span></div></div>` + Array.from({ length: Math.min(d, 60) }, (_, i) => d - i).map(n => { const l = leccion(n), o = S.open[n]; return `<div class="card lrow"><button class="lt" data-les="${n}"><b>${n}</b><span>${esc(l.t)}</span><span style="flex:none;color:var(--faint)">${o ? "−" : "+"}</span></button>${o ? `<p>${esc(l.x)}</p><p style="font-weight:700;color:var(--fg)">${esc(l.q)}</p>` : ""}</div>` }).join("");
-  } else if (S.mTab === "frases") {
-    const tom = fq(dayKey(1)), od = openedDays();
-    list = `<div class="card sealed"><span class="seal">${IC.laurel}</span><div><p class="eyebrow b">Mañana · sellada</p><p style="margin:2px 0;font-weight:700">Una frase de ${esc(tom.a)}</p><p class="sub" style="font-size:14px">Se abre desde las ${set().wake || "05:00"}</p></div></div>` + (od.map(k => qc(fq(k), dateLabel(k))).join("") || `<p class="sub">Aún no has abierto ninguna frase. La de hoy te espera en «Hoy».</p>`);
-  } else list = fav.map(quoteById).filter(Boolean).map(q => qc(q)).join("") || `<p class="sub">Guarda con ☆ las frases que quieras releer.</p>`;
-  v.innerHTML = `<header class="mhead page-top"><div><p class="eyebrow b">Aprende en el camino</p><h1 class="title xl">Mentor</h1></div><span class="emblem" style="width:58px;height:58px">${IC.mentor}</span></header>
-    <section class="lesson"><span class="ln">${d}</span><p class="eyebrow" style="color:rgba(255,255,255,.8)">Lección de hoy · Día ${d}</p><h2>${esc(L.t)}</h2><p>${esc(L.x)}</p><p class="q">${esc(L.q)}</p><textarea id="refl" rows="2" placeholder="Tu respuesta (solo la ves tú)">${esc(j.reflex || "")}</textarea></section>
-    <section class="card why"><p class="eyebrow">Tu porqué</p>${set().why ? `<p class="wq">«${esc(set().why)}»</p>` : `<p class="sub">Aún no has escrito tu porqué.</p>`}${set().who ? `<p class="sub">Estás esculpiendo a alguien que <b style="color:var(--fg)">${esc(set().who)}</b>.</p>` : ""}<button class="link" id="editWhy" style="text-align:left">Editar</button></section>
-    <div class="seg" role="tablist">${[["lecciones", "Lecciones"], ["frases", "Frases"], ["favs", "Guardadas"]].map(([k, n]) => `<button role="tab" data-m="${k}" aria-selected="${S.mTab === k}">${n}</button>`).join("")}</div>${list}`;
+  if (S.mTab === "lecciones") list = Array.from({ length: Math.min(d, 100) }, (_, i) => d - i).map(n => { const l = leccion(n), jj = S.journal[lessonDay(n)] || {}, o = S.open[n]; return `<div class="card lrow"><button class="lt" data-les="${n}"><b>${n}</b><span>${esc(l.t)}</span>${jj.lesson ? `<span class="lchk">${CHK}</span>` : ""}<span class="lpm">${o ? "−" : "+"}</span></button>${o ? `<p>${esc(l.x)}</p><p style="font-weight:700;color:var(--fg)">${esc(l.q)}</p>${jj.reflex ? `<p class="mine">Tu respuesta: «${esc(jj.reflex)}»</p>` : ""}` : ""}</div>` }).join("");
+  else if (S.mTab === "frases") { const tom = fq(dayKey(1)), od = openedDays(); list = `<div class="card sealed"><span class="seal">${IC.laurel}</span><div><p class="eyebrow b">Mañana · sellada</p><p style="margin:2px 0;font-weight:700">Una frase de ${esc(tom.a)}</p><p class="sub" style="font-size:14px">Se abre desde las ${set().wake || "05:00"} en Hoy</p></div></div>` + (od.map(k => qc(fq(k), dateLabel(k))).join("") || `<p class="sub">Aún no has abierto ninguna frase. La de hoy te espera en Hoy.</p>`) }
+  else list = fav.map(quoteById).filter(Boolean).map(q => qc(q)).join("") || `<p class="sub">Marca con ☆ las frases que quieras releer.</p>`;
+  v.innerHTML = `<header class="mhead page-top"><div><p class="eyebrow b">Tu mentor</p><h1 class="title">Aprende en el camino</h1></div><span class="emblem" style="width:54px;height:54px">${IC.mentor}</span></header>
+    <p class="sub">Cada día tu mentor te deja una idea para tu proceso. Te lleva un minuto: <b style="color:var(--fg)">léela, piénsala y escribe tu respuesta.</b></p>
+    <section class="lesson">
+      <div class="lhead"><p class="eyebrow" style="color:rgba(255,255,255,.85)">Lección de hoy · ${d} de 100</p>${done ? `<span class="lok">${CHK} Hecha</span>` : ""}</div>
+      <h2>${esc(L.t)}</h2>
+      <div class="lpart"><b>1</b><div><p class="lk">La idea</p><p>${esc(L.x)}</p></div></div>
+      <div class="lpart"><b>2</b><div><p class="lk">Piénsalo</p><p class="q">${esc(L.q)}</p></div></div>
+      <div class="lpart"><b>3</b><div style="flex:1"><p class="lk">Tu respuesta</p><textarea id="refl" rows="3" placeholder="Escribe lo que te venga. Solo lo ves tú.">${esc(j.reflex || "")}</textarea></div></div>
+      <button class="btn white" id="lsave">${done ? "Actualizar mi respuesta" : "Guardar y completar la lección"}</button>
+    </section>
+    <p class="lprog"><b>${lessonsDone()}</b> ${lessonsDone() === 1 ? "lección completada" : "lecciones completadas"} · Mañana: «${esc(leccion(d + 1).t)}»</p>
+    <section class="card why"><p class="eyebrow">Lo que te mueve</p>${set().why ? `<p class="wq">«${esc(set().why)}»</p>` : `<p class="sub">Aún no has escrito tu porqué.</p>`}${set().who ? `<p class="sub">Estás esculpiendo a alguien que <b style="color:var(--fg)">${esc(set().who)}</b>.</p>` : ""}<p class="sub" style="font-size:13.5px">Tu mentor te lo recuerda en los días en que flaqueas.</p><button class="link" id="editWhy" style="text-align:left">Editar</button></section>
+    <div class="lib"><p class="eyebrow b">Tu biblioteca</p><div class="seg" role="tablist">${[["lecciones", "Lecciones"], ["frases", "Frases"], ["favs", "Favoritas"]].map(([k, n]) => `<button role="tab" data-m="${k}" aria-selected="${S.mTab === k}">${n}</button>`).join("")}</div><p class="sub" style="font-size:14px">${HELP[S.mTab]}</p></div>${list}`;
   $("refl").oninput = e => { j.reflex = e.target.value; saveJ() };
+  $("lsave").onclick = () => { if ((j.reflex || "").trim().length < 3) return toast("Escribe tu respuesta, aunque sea una línea."); const first = !j.lesson; j.lesson = true; saveJ(); SFX.done(); haptic(2); toast(first ? "Lección completada. Así se aprende en el camino." : "Respuesta guardada."); renderMentor(v) };
   $("editWhy").onclick = () => openSheet("identity");
   v.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { SFX.tap(); S.mTab = b.dataset.m; renderMentor(v) });
   v.querySelectorAll("[data-les]").forEach(b => b.onclick = () => { const n = +b.dataset.les; S.open[n] = !S.open[n]; renderMentor(v) });
   v.querySelectorAll("[data-fav]").forEach(b => b.onclick = () => { const id = b.dataset.fav, s = new Set(fav); s.has(id) ? s.delete(id) : s.add(id); S.set.fav = [...s]; saveSet(); SFX.tap(); renderMentor(v) });
 }
+
+/* ================= GALERÍA ================= */
+function unlockDates() { const out = {}; let c = 0; for (let o = -800; o <= 0; o++) { const k = dayKey(o); if (k < START()) continue; if (isRitual(k)) { c++; GALERIA.forEach((p, i) => { if (p.d === c) out[i] = k }) } } return out }
+const nextPiece = (n = sculpted()) => GALERIA.find(p => p.d > n) || null;
+function galleryHTML() {
+  const n = sculpted(), got = GALERIA.filter(p => n >= p.d).length, nx = nextPiece(n), prev = [...GALERIA].reverse().find(p => p.d <= n), from = prev ? prev.d : 0;
+  return `<section class="gal"><div class="sec-h"><div><p class="eyebrow b">Tu galería</p><h2 class="title">Colección</h2></div><p class="galcount"><b>${got}</b>/${GALERIA.length}</p></div>
+    <p class="sub">Cada cierto número de días esculpidos ganas una pieza nueva para tu galería. Las oscuras aún te esperan.</p>
+    ${nx ? `<button class="card galnext" data-pc="${GALERIA.indexOf(nx)}"><div class="gpic locked">${pieceSVG(nx)}</div><div style="flex:1;min-width:0"><p class="eyebrow b">Próxima pieza</p><h3>${esc(nx.n)}</h3><p class="sub" style="font-size:14px">Faltan ${nx.d - n} ${nx.d - n === 1 ? "día esculpido" : "días esculpidos"}</p><div class="bar"><b style="width:${Math.round((n - from) / (nx.d - from) * 100)}%"></b></div></div></button>` : `<p class="sub"><b style="color:var(--fg)">Colección completa.</b> Eres leyenda.</p>`}
+    <div class="galgrid">${GALERIA.map((p, i) => `<button class="gcard ${n >= p.d ? "got" : "locked"}" data-pc="${i}"><div class="gpic">${pieceSVG(p)}${n >= p.d ? "" : `<span class="lock">${p.d}</span>`}</div><b>${esc(p.n)}</b></button>`).join("")}</div></section>`;
+}
+function bindGallery(v) { v.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { SFX.tap(); S.piece = +b.dataset.pc; openSheet("piece") }) }
+SHEETS.piece = (b, f) => {
+  const p = GALERIA[S.piece], n = sculpted(), got = n >= p.d, when = unlockDates()[S.piece];
+  b.classList.add("middle");
+  b.innerHTML = `<div class="piecebig ${got ? "" : "locked"}">${pieceSVG(p)}</div><p class="eyebrow b">Pieza ${S.piece + 1} de ${GALERIA.length} · ${p.d} días esculpidos</p><h2 class="title">${esc(p.n)}</h2><p class="sub" style="max-width:30ch">${got ? esc(p.t) : "Esta pieza aún duerme dentro de la piedra."}</p>${got ? (when ? `<p class="okline" style="justify-content:center">${CHK} Conseguida el ${dateLabel(when)}</p>` : "") : `<div style="width:100%;max-width:300px"><div class="bar"><b style="width:${Math.round(n / p.d * 100)}%"></b></div><p class="sub" style="font-size:14px;margin-top:8px">Llevas ${n} de ${p.d}. Faltan ${p.d - n} días esculpidos.</p></div>`}`;
+  footBtn(f, got ? "Volver a mi galería" : "A por ella", closeSheet);
+};
 
 /* ================= ESTATUA ================= */
 function renderEstatua(v) {
@@ -434,11 +489,12 @@ function renderEstatua(v) {
   for (let i = 0; i < 35 + off && cal.length < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); if (d > new Date()) break; const k = fmt(d), c = k >= START() ? nDone(k) : 0; cal.push(`<i class="${k === dayKey(0) ? "today" : ""}" style="${c ? `background:color-mix(in srgb,var(--blue) ${Math.round(10 + c / 8 * 85)}%,var(--s2));color:${c >= 6 ? "#fff" : "var(--fg)"}` : ""}" title="${k}">${d.getDate()}</i>`) }
   const w = S.weighs.slice(-10);
   v.innerHTML = `<section class="hero statue-hero"><div class="bar-top"><span class="wordmark">LEVO</span><span class="eyebrow" style="color:#fff;opacity:.85">Fase ${fz.i + 1} de 8</span></div>
-      <div class="hgrid"><div class="stage" id="stage"><div class="beat"><b></b><i></i><i></i></div>${myStatue(n)}</div>
-        <div class="hleft"><div class="daynum"><span>ESCULPIDOS</span><b class="${n >= 100 ? "d3" : ""}">${n}</b><small>DÍAS</small></div><p class="hphase">${esc(fz.name)}</p><p class="hphase-sub">${esc(fz.txt)}</p></div></div>
+      ${dustHTML()}<div class="hgrid"><div class="stage" id="stage"><div class="beat"><b></b><i></i><i></i></div>${myStatue(n)}</div>
+        <div class="hleft"><div class="daynum"><span>ESCULPIDOS</span><b class="${n >= 100 ? "d3" : ""}" data-count="${n}">${n}</b><small>DÍAS</small></div><p class="hphase">${esc(fz.name)}</p><p class="hphase-sub">${esc(fz.txt)}</p></div></div>
       <div class="today"><div class="tt"><span>${nx ? `Hacia «${esc(nx[1])}»` : "Obra terminada"}</span><b>${nx ? `${nx[0] - n} ${nx[0] - n === 1 ? "día" : "días"}` : "100"}</b></div><div class="segs"><i class="on" style="flex:${Math.max(.01, pct)}"></i><i style="flex:${Math.max(.01, 1 - pct)}"></i></div></div></section>
     ${set().who ? `<p class="sculpting">Estás esculpiendo a alguien que <em>${esc(set().who)}</em>.</p>` : ""}
     <button class="btn" id="shareStatue">Compartir mi estatua</button>
+    ${galleryHTML()}
     <div class="stats"><div class="stat"><b>${streak()}</b><small>días seguidos esculpiendo</small></div><div class="stat"><b>${wakeStreak()}</b><small>en pie a las ${set().wake || "05:00"}</small></div><div class="stat"><b>${dayNum()}</b><small>días de camino</small></div></div>
     <section class="card"><p class="eyebrow" style="margin-bottom:6px">Las 8 formas de tu estatua</p><div class="phases">${FASES.map((f, i) => `<div class="ph ${i < fz.i ? "done" : i === fz.i ? "now" : ""}"><span class="n">${i < fz.i ? "✓" : i + 1}</span><div class="t"><b>${esc(f[1])}</b><small>${esc(f[2])}</small></div><span class="d">${f[0]} d</span></div>`).join("")}</div></section>
     <section class="card"><p class="eyebrow" style="margin-bottom:12px">Últimas semanas</p><div class="cal">${["L", "M", "X", "J", "V", "S", "D"].map(d => `<span class="h">${d}</span>`).join("")}${cal.join("")}</div><p class="sub" style="font-size:14px;margin-top:12px">Más azul, más pasos cumplidos. Los días con 6 o más quedan esculpidos.</p></section>
@@ -446,25 +502,52 @@ function renderEstatua(v) {
       <div class="task"><input id="kg" type="number" inputmode="decimal" step="0.1" placeholder="Peso de hoy (kg)"><button class="link" id="saveKg">Guardar</button></div></section>`;
   $("saveKg").onclick = () => { const kg = parseFloat(($("kg").value || "").replace(",", ".")); if (!kg || kg < 30 || kg > 300) return toast("Escribe un peso válido."); const k = dayKey(0); S.weighs = S.weighs.filter(x => x.day !== k).concat([{ day: k, kg }]); write(() => sb.from("weighins").upsert({ user_id: S.uid, day: k, kg }, { onConflict: "user_id,day" })); S.bodyP = { ...(S.bodyP || {}), weight_kg: kg }; write(() => sb.from("body_profile").upsert({ user_id: S.uid, ...S.bodyP, updated_at: new Date().toISOString() }, { onConflict: "user_id" })); toast("Peso guardado."); renderEstatua(v) };
   $("shareStatue").onclick = shareStatue;
+  bindGallery(v); countUps(v); tilt(v.querySelector(".hero"));
 }
 function sparkline(w) { const W = 300, H = 70, ks = w.map(x => +x.kg), mn = Math.min(...ks), mx = Math.max(...ks), rg = Math.max(.5, mx - mn); const pts = w.map((x, i) => `${(8 + i * (W - 16) / (w.length - 1)).toFixed(1)},${(H - 8 - (x.kg - mn) / rg * (H - 16)).toFixed(1)}`); const d = ks[ks.length - 1] - ks[0]; return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-label="Evolución del peso"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="sub" style="font-size:14px">${d === 0 ? "Estable" : (d > 0 ? "+" : "−") + Math.abs(d).toFixed(1).replace(".", ",") + " kg"} en tus últimos ${w.length} registros</p>` }
-async function shareStatue() {
-  SFX.tap();
-  const n = sculpted(), fz = faseDe(n), W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+function shareStatue() { SFX.tap(); openSheet("share") }
+const loadImg = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src });
+function wrapText(x, text, maxW) { const words = String(text).split(" "), lines = []; let l = ""; for (const w of words) { const t = l ? l + " " + w : w; if (x.measureText(t).width > maxW && l) { lines.push(l); l = w } else l = t } if (l) lines.push(l); return lines }
+/* La tarjeta para redes: azul Klein, el número enorme, la estatua saliéndose del borde y lo que estás esculpiendo */
+async function shareCanvas(kind) {
+  const story = kind !== "post", W = 1080, H = story ? 1920 : 1350, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+  const n = sculpted(), fz = faseDe(n), d = dayNum(), e = Math.round(Math.pow(Math.min(1, n / 50), .75) * 100);
+  try { await Promise.all(["900 300px Archivo", "800 80px Archivo", "600 40px Archivo", "italic 500 40px Archivo"].map(f => document.fonts.load(f))) } catch (_) { }
+  const F = (w, s) => `${w} ${s}px Archivo, "Arial Black", Arial, sans-serif`, wide = v => { try { x.fontStretch = v } catch (_) { } };
   x.fillStyle = "#1f3fff"; x.fillRect(0, 0, W, H);
-  const g = x.createRadialGradient(700, 760, 40, 700, 760, 760); g.addColorStop(0, "rgba(255,255,255,.3)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
-  try { await Promise.all([document.fonts.load('900 80px Archivo'), document.fonts.load('600 40px Archivo')]) } catch (e) { }
-  const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(myStatue(n)); await img.decode().catch(() => { });
-  x.drawImage(img, 330, 300, 820, 1066);
-  x.fillStyle = "#fff"; x.textAlign = "left"; x.font = '900 54px Archivo, Arial, sans-serif'; x.fillText("L E V O", 80, 170);
-  x.font = '700 34px Archivo, Arial, sans-serif'; x.globalAlpha = .85; x.fillText("DÍAS ESCULPIDOS", 80, 420); x.globalAlpha = 1;
-  x.font = '900 300px Archivo, Arial, sans-serif'; x.fillText(String(n), 66, 690);
-  x.font = '800 64px Archivo, Arial, sans-serif'; x.fillText(fz.name.toUpperCase(), 80, 1500);
-  x.font = '500 40px Archivo, Arial, sans-serif'; x.globalAlpha = .88; x.fillText(`Día ${dayNum()} de 100 · ${streak()} seguidos`, 80, 1570);
-  x.font = 'italic 500 40px Archivo, Arial, sans-serif'; x.fillText("«Nunca dejes de esculpir tu propia estatua.»", 80, 1760); x.fillText("— Plotino", 80, 1814); x.globalAlpha = 1;
-  c.toBlob(async blob => { const file = new File([blob], "levo-mi-estatua.png", { type: "image/png" }); try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: "Esculpiendo mi estatua en Levo" }); return } } catch (e) { if (e && e.name === "AbortError") return } const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "levo-mi-estatua.png"; document.body.append(a); a.click(); a.remove() }, "image/png");
+  x.strokeStyle = "rgba(255,255,255,.05)"; x.lineWidth = 2; for (let gx = 0; gx < W; gx += 60) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke() }
+  const sy = story ? 250 : 130, sw = story ? 880 : 700, sx = W - sw + (story ? 230 : 190), cxs = sx + sw * .46, cys = sy + sw * .48;
+  x.save(); x.translate(cxs, cys); for (let k = 0; k < 18; k++) { x.rotate(Math.PI / 9); x.fillStyle = k % 2 ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.025)"; x.beginPath(); x.moveTo(0, 0); x.lineTo(1400, -110); x.lineTo(1400, 110); x.closePath(); x.fill() } x.restore();
+  let g = x.createRadialGradient(cxs, cys, 30, cxs, cys, sw * .9); g.addColorStop(0, "rgba(255,255,255,.34)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = 3; [1, 1.45, 1.95].forEach(r => { x.beginPath(); x.arc(cxs, cys, sw * .3 * r, 0, Math.PI * 2); x.stroke() });
+  const svg = myStatue(n).replace('<svg viewBox="0 0 200 260"', '<svg width="' + sw + '" height="' + Math.round(sw * 1.3) + '" viewBox="0 0 200 260"');
+  const img = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+  if (img) x.drawImage(img, sx, sy, sw, sw * 1.3);
+  for (let i = 0; i < 26; i++) { const r = (k => { const v = Math.sin((i + 1) * k) * 43758.5453; return v - Math.floor(v) }), px = sx + sw * (.15 + r(12.9) * .7), py = sy + sw * (.2 + r(78.2) * 1), s = 6 + r(3.7) * 14; x.fillStyle = "rgba(242,242,239," + (.5 + r(5.1) * .5) + ")"; x.beginPath(); x.moveTo(px, py + s * .3); x.lineTo(px + s * .6, py); x.lineTo(px + s, py + s * .45); x.lineTo(px + s * .7, py + s); x.lineTo(px + s * .15, py + s * .85); x.closePath(); x.fill() }
+  x.fillStyle = "#fff"; x.textAlign = "left"; x.textBaseline = "alphabetic";
+  wide("expanded"); x.font = F(900, 46); x.fillText("L E V O", 72, story ? 150 : 110); wide("normal");
+  x.font = F(700, 26); x.globalAlpha = .8; x.textAlign = "right"; x.fillText("TU MENTOR DE DISCIPLINA", W - 72, story ? 150 : 110); x.textAlign = "left"; x.globalAlpha = 1;
+  const top = story ? 330 : 220;
+  x.font = F(800, 38); x.globalAlpha = .85; x.fillText("DÍA", 72, top); x.globalAlpha = 1;
+  wide("expanded"); x.font = F(900, d >= 100 ? 230 : 330); x.fillText(String(d), 56, top + (d >= 100 ? 230 : 300)); wide("normal");
+  x.font = F(800, 38); x.globalAlpha = .85; x.fillText("DE 100", 72, top + (d >= 100 ? 300 : 370)); x.globalAlpha = 1;
+  let y = top + (story ? 500 : 460);
+  wide("expanded"); x.font = F(900, story ? 74 : 60); const ph = wrapText(x, fz.name.toUpperCase(), 520); ph.forEach((l, i) => x.fillText(l, 72, y + i * (story ? 76 : 62))); wide("normal"); y += ph.length * (story ? 76 : 62);
+  x.fillStyle = "rgba(255,255,255,.25)"; x.fillRect(72, y, 440, 14); x.fillStyle = "#fff"; x.fillRect(72, y, 440 * e / 100, 14);
+  x.font = F(600, 30); x.fillText(e >= 100 ? "Ya ha salido entera del bloque" : `Ha salido el ${e} % del bloque`, 72, y + 60);
+  if (story) {
+    y = 1340; x.font = F(500, 42); x.globalAlpha = .9; x.fillText("Estoy esculpiendo a alguien que", 72, y); x.globalAlpha = 1;
+    x.font = F(800, 66); wrapText(x, set().who || "cumple lo que se promete", W - 144).slice(0, 3).forEach((l, i) => x.fillText(l, 72, y + 84 + i * 74));
+    y = 1640; [[streak(), "días seguidos"], [n, "días esculpidos"], [set().wake || "05:00", "en pie cada día"]].forEach(([v, t], i) => { const bx = 72 + i * 320; x.font = F(900, 76); x.fillText(String(v), bx, y); x.font = F(600, 28); x.globalAlpha = .85; x.fillText(t, bx, y + 42); x.globalAlpha = 1 });
+    x.font = F(700, 24); x.globalAlpha = .8; x.fillText("ÚLTIMOS 14 DÍAS", 72, 1748); x.globalAlpha = 1; y = 1764; for (let i = 13; i >= 0; i--) { const k = dayKey(-i), on = k >= START() && isRitual(k), bx = 72 + (13 - i) * 66; x.fillStyle = on ? "#fff" : "rgba(255,255,255,.18)"; x.fillRect(bx, y, 52, 52) } x.fillStyle = "#fff";
+    x.font = F(800, 36); x.fillText("¿Y tú, qué estatua estás esculpiendo?", 72, 1882);
+  } else {
+    y = 1110; x.font = F(500, 36); x.globalAlpha = .9; x.fillText("Estoy esculpiendo a alguien que", 72, y); x.globalAlpha = 1;
+    x.font = F(800, 54); wrapText(x, set().who || "cumple lo que se promete", W - 144).slice(0, 2).forEach((l, i) => x.fillText(l, 72, y + 66 + i * 60));
+    x.font = F(700, 30); x.fillText(`${streak()} días seguidos · ¿y tú, qué estatua estás esculpiendo?`, 72, 1300);
+  }
+  return new Promise(r => c.toBlob(r, "image/png"));
 }
-
 /* ================= PERFIL ================= */
 function renderPerfil(v) {
   const fz = faseDe(sculpted()), granted = "Notification" in window && Notification.permission === "granted", snd = set().sound !== false;
