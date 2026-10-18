@@ -800,43 +800,72 @@ function sparkline(w) { const W = 300, H = 70, ks = w.map(x => +x.kg), mn = Math
 function shareStatue() { SFX.tap(); openSheet("share") }
 const loadImg = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src });
 function wrapText(x, text, maxW) { const words = String(text).split(" "), lines = []; let l = ""; for (const w of words) { const t = l ? l + " " + w : w; if (x.measureText(t).width > maxW && l) { lines.push(l); l = w } else l = t } if (l) lines.push(l); return lines }
-/* La tarjeta para redes: azul Klein, el número enorme, la estatua saliéndose del borde y lo que estás esculpiendo */
+/* La tarjeta para redes: negro con auroras roja y azul, el número enorme detrás, la estatua 3D delante y un gancho para que te pregunten */
 async function shareCanvas(kind) {
   const story = kind !== "post", W = 1080, H = story ? 1920 : 1350, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
   const n = sculpted(), fz = faseDe(n), d = dayNum(), e = Math.round(Math.pow(Math.min(1, n / 50), .75) * 100);
-  try { await Promise.all(["900 300px Archivo", "800 80px Archivo", "600 40px Archivo", "italic 500 40px Archivo"].map(f => document.fonts.load(f))) } catch (_) { }
+  try { await Promise.all(["900 300px Archivo", "800 80px Archivo", "600 40px Archivo", "300 40px Archivo"].map(f => document.fonts.load(f))) } catch (_) { }
   const F = (w, s) => `${w} ${s}px Archivo, "Arial Black", Arial, sans-serif`, wide = v => { try { x.fontStretch = v } catch (_) { } };
-  x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
-  x.strokeStyle = "rgba(255,255,255,.05)"; x.lineWidth = 2; for (let gx = 0; gx < W; gx += 60) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke() }
-  const sy = story ? 250 : 130, sw = story ? 880 : 700, sx = W - sw + (story ? 230 : 190), cxs = sx + sw * .46, cys = sy + sw * .48;
-  x.save(); x.translate(cxs, cys); for (let k = 0; k < 18; k++) { x.rotate(Math.PI / 9); x.fillStyle = k % 2 ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.025)"; x.beginPath(); x.moveTo(0, 0); x.lineTo(1400, -110); x.lineTo(1400, 110); x.closePath(); x.fill() } x.restore();
-  let g = x.createRadialGradient(cxs, cys, 30, cxs, cys, sw * .9); g.addColorStop(0, "rgba(255,255,255,.16)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = 3; [1, 1.45, 1.95].forEach(r => { x.beginPath(); x.arc(cxs, cys, sw * .3 * r, 0, Math.PI * 2); x.stroke() });
-  const svg = myStatue(n).replace('<svg viewBox="0 0 200 260"', '<svg width="' + sw + '" height="' + Math.round(sw * 1.3) + '" viewBox="0 0 200 260"');
-  const img = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
-  if (img) x.drawImage(img, sx, sy, sw, sw * 1.3);
-  for (let i = 0; i < 26; i++) { const r = (k => { const v = Math.sin((i + 1) * k) * 43758.5453; return v - Math.floor(v) }), px = sx + sw * (.15 + r(12.9) * .7), py = sy + sw * (.2 + r(78.2) * 1), s = 6 + r(3.7) * 14; x.fillStyle = "rgba(242,242,239," + (.5 + r(5.1) * .5) + ")"; x.beginPath(); x.moveTo(px, py + s * .3); x.lineTo(px + s * .6, py); x.lineTo(px + s, py + s * .45); x.lineTo(px + s * .7, py + s); x.lineTo(px + s * .15, py + s * .85); x.closePath(); x.fill() }
-  x.fillStyle = "#fff"; x.textAlign = "left"; x.textBaseline = "alphabetic";
-  wide("expanded"); x.font = F(900, 46); x.fillText("L E V O", 72, story ? 150 : 110); wide("normal");
-  x.font = F(700, 26); x.globalAlpha = .8; x.textAlign = "right"; x.fillText("TU MENTOR DE DISCIPLINA", W - 72, story ? 150 : 110); x.textAlign = "left"; x.globalAlpha = 1;
-  const top = story ? 330 : 220;
-  x.font = F(800, 38); x.globalAlpha = .85; x.fillText("DÍA", 72, top); x.globalAlpha = 1;
-  wide("expanded"); x.font = F(900, d >= 100 ? 230 : 330); x.fillText(String(d), 56, top + (d >= 100 ? 230 : 300)); wide("normal");
-  x.font = F(800, 38); x.globalAlpha = .85; x.fillText("DE 100", 72, top + (d >= 100 ? 300 : 370)); x.globalAlpha = 1;
-  let y = top + (story ? 500 : 460);
-  wide("expanded"); x.font = F(900, story ? 74 : 60); const ph = wrapText(x, fz.name.toUpperCase(), 520); ph.forEach((l, i) => x.fillText(l, 72, y + i * (story ? 76 : 62))); wide("normal"); y += ph.length * (story ? 76 : 62);
-  x.fillStyle = "rgba(255,255,255,.25)"; x.fillRect(72, y, 440, 14); x.fillStyle = "#fff"; x.fillRect(72, y, 440 * e / 100, 14);
-  x.font = F(600, 30); x.fillText(e >= 100 ? "Ya ha salido entera del bloque" : `Ha salido el ${e} % del bloque`, 72, y + 60);
+  const RED = "#ff3b30", AZ = "#2f6bff", grad = (x0, y0, x1, y1) => { const g = x.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, RED); g.addColorStop(1, AZ); return g };
+  const rr = (X, Y, w, h, r) => { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, w, h, r); else x.rect(X, Y, w, h) };
+  const blob = (cx, cy, r, rgb, a) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); x.fillStyle = g; x.fillRect(0, 0, W, H) };
+  /* fondo: negro, auroras y grano */
+  x.fillStyle = "#050505"; x.fillRect(0, 0, W, H);
+  x.globalCompositeOperation = "lighter";
+  blob(W * .08, H * .2, 640, "255,59,48", .3); blob(W * 1.02, H * .42, 760, "47,107,255", .4); blob(W * .3, H * 1.02, 700, "47,107,255", .14); blob(W * .9, H * .06, 380, "255,59,48", .12);
+  x.globalCompositeOperation = "source-over";
+  let sd = 9; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 14000; i++) { x.fillStyle = `rgba(255,255,255,${(rnd() * .06).toFixed(3)})`; x.fillRect(rnd() * W, rnd() * H, 1.6, 1.6) }
+  /* cabecera: la marca y un piloto rojo encendido */
+  const hy = story ? 215 : 100; x.fillStyle = "#fff"; x.textAlign = "left"; x.textBaseline = "alphabetic";
+  wide("expanded"); x.font = F(900, 44); x.fillText("L E V O", 72, hy); wide("normal");
+  x.font = F(700, 25); const lab = "ESCULPIÉNDOME", lw = x.measureText(lab).width, px = W - 72 - lw - 70;
+  x.strokeStyle = "rgba(255,255,255,.28)"; x.lineWidth = 2; rr(px, hy - 37, lw + 70, 52, 26); x.stroke();
+  x.shadowColor = RED; x.shadowBlur = 22; x.fillStyle = RED; x.beginPath(); x.arc(px + 28, hy - 11, 8, 0, Math.PI * 2); x.fill(); x.shadowBlur = 0;
+  x.fillStyle = "#fff"; x.fillText(lab, px + 48, hy);
+  /* el día, enorme y en contorno de color, por detrás de la estatua */
+  const top = story ? 350 : 190, ds = String(d);
+  x.font = F(800, 34); x.globalAlpha = .8; x.fillText("DÍA", 76, top); x.globalAlpha = 1;
+  wide("expanded"); let fs = story ? 520 : 400; x.font = F(900, fs); while (x.measureText(ds).width > W - 150 && fs > 180) { fs -= 20; x.font = F(900, fs) }
+  const nw = x.measureText(ds).width, nb = top + 20 + fs * .74;
+  x.globalAlpha = .16; x.fillStyle = grad(56, top, 56 + nw, nb); x.fillText(ds, 52, nb); x.globalAlpha = 1;
+  x.lineWidth = 5; x.strokeStyle = grad(56, top, 56 + nw, nb); x.strokeText(ds, 52, nb); wide("normal");
+  x.font = F(800, 34); x.globalAlpha = .8; x.fillText("DE 100", 76, nb + 62); x.globalAlpha = 1;
+  /* la estatua: brillo, anillos de color y la escultura 3D (o el SVG si no hay 3D) */
+  const sw = story ? 860 : 660, sh = sw * 1.3, scx = story ? 690 : 720, sx = scx - sw / 2, sy = story ? 330 : 150, hcy = sy + sh * .38;
+  blob(scx, hcy, sw * .55, "255,255,255", .1);
+  [[.36, .5, 0], [.5, .34, 1.4], [.66, .2, 2.6]].forEach(([r, a, s]) => { x.globalAlpha = a; x.lineWidth = 3; x.strokeStyle = grad(scx - sw * r, hcy, scx + sw * r, hcy); x.beginPath(); x.arc(scx, hcy, sw * r, s, s + Math.PI * 1.55); x.stroke() }); x.globalAlpha = 1;
+  let shot = null;
+  if (window.Statue3D) try { shot = await Promise.race([window.Statue3D.shot({ days: n, stage: fz.i, w: 1000, h: 1300 }), new Promise(r => setTimeout(() => r(null), 6000))]) } catch (_) { }
+  let src = shot; if (!src) { const svg = myStatue(n).replace('<svg viewBox="0 0 200 260"', '<svg width="' + sw + '" height="' + Math.round(sh) + '" viewBox="0 0 200 260"'); src = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg)) }
+  if (src) {
+    /* el pie de la estatua se oscurece y se funde con el fondo para dejar sitio al texto */
+    const tmp = document.createElement("canvas"); tmp.width = sw; tmp.height = Math.round(sh); const tx = tmp.getContext("2d"); tx.drawImage(src, 0, 0, sw, sh);
+    tx.globalCompositeOperation = "source-atop"; const dg = tx.createLinearGradient(0, sh * .55, 0, sh * .88); dg.addColorStop(0, "rgba(5,5,5,0)"); dg.addColorStop(1, "rgba(5,5,5,.9)"); tx.fillStyle = dg; tx.fillRect(0, 0, sw, sh);
+    tx.globalCompositeOperation = "destination-in"; const ag = tx.createLinearGradient(0, sh * .7, 0, sh * .96); ag.addColorStop(0, "#000"); ag.addColorStop(1, "rgba(0,0,0,0)"); tx.fillStyle = ag; tx.fillRect(0, 0, sw, sh);
+    x.drawImage(tmp, sx, sy);
+  }
+  /* lascas de color saltando del bloque */
+  for (let i = 0; i < 22; i++) { const a = rnd() * Math.PI * 2, r0 = sw * (.2 + rnd() * .3), qx = scx + Math.cos(a) * r0, qy = hcy + Math.sin(a) * r0 * .8, s = 5 + rnd() * 11; x.fillStyle = i % 3 === 0 ? RED : i % 3 === 1 ? AZ : "rgba(255,255,255,.8)"; x.globalAlpha = .55 + rnd() * .45; x.beginPath(); x.moveTo(qx, qy + s * .3); x.lineTo(qx + s * .6, qy); x.lineTo(qx + s, qy + s * .45); x.lineTo(qx + s * .7, qy + s); x.lineTo(qx + s * .15, qy + s * .85); x.closePath(); x.fill() } x.globalAlpha = 1;
+  /* la fase y lo que ha salido del bloque */
+  let y = nb + (story ? 190 : 150); x.fillStyle = "#fff";
+  wide("expanded"); x.font = F(900, story ? 60 : 48); const ph = wrapText(x, fz.name.toUpperCase(), story ? 480 : 420); ph.forEach((l, i) => x.fillText(l, 72, y + i * (story ? 64 : 52))); wide("normal"); y += (ph.length - 1) * (story ? 64 : 52) + 40;
+  const bw = story ? 420 : 380; x.fillStyle = "rgba(255,255,255,.16)"; rr(72, y, bw, 12, 6); x.fill(); x.fillStyle = grad(72, 0, 72 + bw, 0); rr(72, y, Math.max(12, bw * e / 100), 12, 6); x.fill();
+  x.fillStyle = "#fff"; x.font = F(600, 28); x.globalAlpha = .85; x.fillText(e >= 100 ? "Ya ha salido entera del bloque" : `Ha salido el ${e} % del bloque`, 72, y + 56); x.globalAlpha = 1;
+  /* quién estás esculpiendo */
+  y = story ? 1350 : 1010;
+  x.font = F(300, story ? 42 : 34); x.globalAlpha = .8; x.fillText("Estoy esculpiendo a alguien que", 72, y); x.globalAlpha = 1;
+  x.font = F(800, story ? 68 : 54); const wl = wrapText(x, set().who || "cumple lo que se promete", W - 144).slice(0, 2); wl.forEach((l, i) => x.fillText(l, 72, y + (story ? 82 : 66) + i * (story ? 76 : 62)));
+  const ly = y + (story ? 82 : 66) + (wl.length - 1) * (story ? 76 : 62) + 26, lw2 = Math.min(W - 144, x.measureText(wl[wl.length - 1]).width); x.fillStyle = grad(72, 0, 72 + lw2, 0); x.fillRect(72, ly, lw2, 6); x.fillStyle = "#fff";
   if (story) {
-    y = 1340; x.font = F(500, 42); x.globalAlpha = .9; x.fillText("Estoy esculpiendo a alguien que", 72, y); x.globalAlpha = 1;
-    x.font = F(800, 66); wrapText(x, set().who || "cumple lo que se promete", W - 144).slice(0, 3).forEach((l, i) => x.fillText(l, 72, y + 84 + i * 74));
-    y = 1640; [[streak(), "días seguidos"], [n, "días esculpidos"], [set().wake || "05:00", "en pie cada día"]].forEach(([v, t], i) => { const bx = 72 + i * 320; x.font = F(900, 76); x.fillText(String(v), bx, y); x.font = F(600, 28); x.globalAlpha = .85; x.fillText(t, bx, y + 42); x.globalAlpha = 1 });
-    x.font = F(700, 24); x.globalAlpha = .8; x.fillText("ÚLTIMOS 14 DÍAS", 72, 1748); x.globalAlpha = 1; y = 1764; for (let i = 13; i >= 0; i--) { const k = dayKey(-i), on = k >= START() && isRitual(k), bx = 72 + (13 - i) * 66; x.fillStyle = on ? "#fff" : "rgba(255,255,255,.18)"; x.fillRect(bx, y, 52, 52) } x.fillStyle = "#fff";
-    x.font = F(800, 36); x.fillText("¿Y tú, qué estatua estás esculpiendo?", 72, 1882);
+    y = 1600; [[streak(), streak() === 1 ? "día seguido" : "días seguidos"], [n, n === 1 ? "día esculpido" : "días esculpidos"], [set().wake || "05:00", "en pie cada día"]].forEach(([v, t], i) => { const bx = 72 + i * 322; x.font = F(900, 64); x.fillText(String(v), bx, y); x.font = F(500, 26); x.globalAlpha = .75; x.fillText(t, bx, y + 38); x.globalAlpha = 1 });
+    const qs = 34; y = 1684; const gg = grad(72, 0, 72 + 14 * (qs + 10), 0);
+    for (let i = 13; i >= 0; i--) { const k = dayKey(-i), on = k >= START() && isRitual(k), bx = 72 + (13 - i) * (qs + 10); if (on) { x.fillStyle = gg; rr(bx, y, qs, qs, 8); x.fill() } else { x.strokeStyle = i === 0 ? "rgba(255,255,255,.7)" : "rgba(255,255,255,.2)"; x.lineWidth = 2; rr(bx + 1, y + 1, qs - 2, qs - 2, 8); x.stroke() } }
+    x.fillStyle = "#fff"; x.font = F(500, 24); x.globalAlpha = .6; x.textAlign = "right"; x.fillText("últimos 14 días", W - 72, y + 25); x.textAlign = "left"; x.globalAlpha = 1;
+    x.font = F(800, 36); x.fillText("100 días para esculpirme. Pregúntame cómo.", 72, 1790);
   } else {
-    y = 1110; x.font = F(500, 36); x.globalAlpha = .9; x.fillText("Estoy esculpiendo a alguien que", 72, y); x.globalAlpha = 1;
-    x.font = F(800, 54); wrapText(x, set().who || "cumple lo que se promete", W - 144).slice(0, 2).forEach((l, i) => x.fillText(l, 72, y + 66 + i * 60));
-    x.font = F(700, 30); x.fillText(`${streak()} días seguidos · ¿y tú, qué estatua estás esculpiendo?`, 72, 1300);
+    x.font = F(700, 30); x.globalAlpha = .85; x.fillText(`${streak()} ${streak() === 1 ? "día seguido" : "días seguidos"} · ${n} esculpidos`, 72, 1200); x.globalAlpha = 1;
+    x.font = F(800, 34); x.fillText("100 días para esculpirme. Pregúntame cómo.", 72, 1290);
   }
   return new Promise(r => c.toBlob(r, "image/png"));
 }
@@ -922,7 +951,7 @@ function renderOnb(app) {
   let body = "", btn = "Continuar", ok = true, extra = "";
   const no = `<p class="bigno">${pad(o.step + 1)} / ${N}</p>`;
   if (o.step === 0) { body = `${no}<h1 class="title xl">Tu mentor de disciplina</h1><p class="sub" style="max-width:24ch">Durante 100 días vas a esculpir a la persona que quieres ser. Cada día, un golpe de cincel.</p><div style="flex:1;min-height:150px"></div><input id="on" placeholder="¿Cómo te llamas?" maxlength="18" value="${esc(o.name)}">`; btn = "Empezar"; extra = `<div class="ostage">${statueSVG(0, "", 0, o.look)}</div>` }
-  if (o.step === 1) body = `${no}<h1 class="title">Por qué funciona</h1><p class="sub">Levo no te pide fuerza de voluntad infinita. Te da un sistema.</p><div class="whys">${WHYS.map(([t, x], i) => `<div><b>0${i + 1}</b><div><h3>${t}</h3><p>${x}</p></div></div>`).join("")}</div>`;
+  if (o.step === 1) body = `${no}<h1 class="title">Por qué funciona</h1><p class="sub">Levo no te pide fuerza de voluntad infinita. Te da un sistema.</p><div class="whys">${WHYS.map(([t, x], i) => `<div class="wstep" style="--d:${(.25 + i * .22).toFixed(2)}s"><span class="wn">${i + 1}</span><h3>${t}</h3><p>${x}</p></div>`).join("")}</div>`;
   if (o.step === 2) { ok = o.goals.size >= 1; btn = ok ? "Continuar" : "Elige al menos una"; body = `${no}<h1 class="title">¿Qué quieres transformar?</h1><p class="sub">Elige de 1 a 3. Tus hábitos y tu mentor se adaptarán.</p><div class="areas">${AREAS.map(a => `<button data-g="${a.id}" class="${o.goals.has(a.id) ? "on" : ""}"><b>${a.n}</b><small>${a.d}</small></button>`).join("")}</div>` }
   if (o.step === 3) { ok = o.why.trim().length >= 3; btn = ok ? "Continuar" : "Escribe tu porqué"; body = `${no}<h1 class="title">¿Por qué lo quieres de verdad?</h1><p class="sub">Escribe la razón que te levantará cuando no tengas ganas. Te la recordaré en los días difíciles.</p><textarea id="ow" rows="3" placeholder="Porque…">${esc(o.why)}</textarea><div class="sugs">${PORQUES.map(p => `<button data-why="${esc(p)}">${esc(p)}</button>`).join("")}</div>` }
   if (o.step === 4) { ok = o.who.trim().length >= 3; btn = ok ? "Continuar" : "Completa la frase"; body = `${no}<h1 class="title">¿Quién serás?</h1><p class="sub">No pienses en metas: piensa en identidad. Completa la frase.</p><p style="margin:0;font-size:22px;font-weight:800;font-stretch:110%">Dentro de 100 días soy alguien que…</p><textarea id="oq" rows="2" placeholder="…se levanta sin negociar">${esc(o.who)}</textarea><div class="sugs">${QUIENES.map(p => `<button data-who="${esc(p)}">${esc(p)}</button>`).join("")}</div>` }
@@ -931,7 +960,8 @@ function renderOnb(app) {
   if (o.step === 7) {
     const sug = new Set(AREAS.filter(a => o.goals.has(a.id)).flatMap(a => a.h)), list = [...HABITOS_ESTOICOS.filter(h => sug.has(h.id)), ...HABITOS_ESTOICOS.filter(h => !sug.has(h.id))];
     ok = o.picks.size >= 3; btn = ok ? "Continuar" : `Elige ${3 - o.picks.size} más`;
-    body = `${no}<h1 class="title">Tus hábitos</h1><p class="sub">Elige de 3 a 5. Arriba, los que más te ayudan con lo que quieres transformar.</p><div class="fields">${list.map(h => `<button class="hab ${o.picks.has(h.id) ? "on" : ""}" data-p="${h.id}"><span class="ck ${o.picks.has(h.id) ? "on" : ""}">✓</span><span style="color:var(--fg)">${esc(h.name)}${sug.has(h.id) ? ` <small style="color:var(--blue);font-weight:700">· recomendado</small>` : ""}</span></button>`).join("")}</div>`;
+    const chip = h => `<button class="hchip ${o.picks.has(h.id) ? "on" : ""}" data-p="${h.id}">${esc(h.s || h.name)}</button>`, mineL = list.filter(h => sug.has(h.id)), rest = list.filter(h => !sug.has(h.id));
+    body = `${no}<h1 class="title">Tus hábitos</h1><p class="sub">Elige de 3 a 5. Mejor pocos y cumplidos que muchos a medias.</p><div class="pdots" id="pdots" aria-label="Elegidos">${[0, 1, 2, 3, 4].map(i => `<i class="${i < o.picks.size ? "on" : ""}"></i>`).join("")}<span>${o.picks.size} de 5</span></div>${mineL.length ? `<div class="hgroup"><p class="eyebrow">Para lo que quieres transformar</p><div class="hchips">${mineL.map(chip).join("")}</div></div>` : ""}<div class="hgroup"><p class="eyebrow">${mineL.length ? "Más hábitos" : "Hábitos"}</p><div class="hchips">${rest.map(chip).join("")}</div></div>`;
   }
   if (o.step === 8) body = `${no}<h1 class="title">Así será cada día</h1><p class="sub">Dos rutinas guiadas, paso a paso. Con 6 de los 8 pasos, el día queda esculpido.</p><div class="card guide"><b>☀</b><div><h3>Mañana · 6 min</h3><p class="sub">Despertar a las ${o.wake}, respirar, tu frase sellada, afirmaciones y 3 tareas.</p></div></div><div class="card guide"><b>◐</b><div><h3>Durante el día · 30 s</h3><p class="sub">Hábitos, comidas y agua.</p></div></div><div class="card guide"><b>☾</b><div><h3>Noche · 5 min</h3><p class="sub">Cierra tus tareas, examina tu día, la lección de tu mentor y prepara mañana.</p></div></div>`;
   if (o.step === 9) body = `${no}<h1 class="title">Tu app, en 5 pestañas</h1><p class="sub">Abajo tienes cinco pestañas. Esto es lo que hace cada una.</p>${tabsHTML()}`;
@@ -949,7 +979,13 @@ function renderOnb(app) {
   app.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { o.look = b.dataset.l; SFX.tap(); re() });
   app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { o.wake = b.dataset.w; SFX.tap(); re() });
   app.querySelectorAll("[data-for=owk]").forEach(b => b.onclick = () => { o.wake = addMin(o.wake, +b.dataset.st); SFX.tap(); haptic(); re() });
-  app.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { const id = b.dataset.p; if (o.picks.has(id)) o.picks.delete(id); else if (o.picks.size < 5) o.picks.add(id); SFX.tap(); re() });
+  app.querySelectorAll("[data-p]").forEach(b => b.onclick = () => {
+    const id = b.dataset.p, pd = $("pdots");
+    if (o.picks.has(id)) o.picks.delete(id); else if (o.picks.size < 5) o.picks.add(id); else { pd.classList.remove("full"); void pd.offsetWidth; pd.classList.add("full"); haptic(); return }
+    SFX.tap(); b.classList.toggle("on", o.picks.has(id));
+    pd.querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i < o.picks.size)); pd.querySelector("span").textContent = `${o.picks.size} de 5`;
+    const okk = o.picks.size >= 3, nx = $("onext"); nx.disabled = !okk; nx.textContent = okk ? "Continuar" : `Elige ${3 - o.picks.size} más`;
+  });
   if ($("oback")) $("oback").onclick = () => { o.step--; re() };
   if ($("onext")) $("onext").onclick = () => { SFX.tap(); haptic(); o.step++; window.scrollTo(0, 0); re() };
   if ($("sign")) bindHold($("sign"), 2200, () => {

@@ -125,6 +125,27 @@ window.Statue3D = {
     dust = new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, size: .08, transparent: true, opacity: 1, depthWrite: false })); dust.userData = { v, life: 1.3 }; world.add(dust);
     eT = Math.min(1, eT + .015);
   },
+  /* Foto para compartir: la escultura con luz de contorno roja y azul, sobre fondo transparente */
+  async shot({ days = 0, stage: st = 0, w = 1000, h = 1300 } = {}) {
+    await ready; if (!ok) return null;
+    const pv = { e, stage, pr: R.getPixelRatio(), sz: R.getSize(new THREE.Vector2()), asp: cam.aspect };
+    e = Math.max(.1, Math.pow(Math.min(1, Math.max(0, days) / 50), .75)); stage = st; apply();
+    block.visible = e < .995; block.position.y = (H + .25) - e * (H + .55) - (H + .5);
+    world.rotation.y = -.38; world.position.y = 0; clip.constant = 0; keyL.position.set(3, 3.4, 6);
+    const kI = keyL.intensity, bC = blockMat.color.getHex(); keyL.intensity = 1.1; blockMat.color.setHex(0x5c5c5c);
+    const red = new THREE.DirectionalLight(0xff3b30, 7), blue = new THREE.DirectionalLight(0x2f6bff, 8);
+    red.position.set(-6, 2.2, -1.5); blue.position.set(6, 2.8, -1.5); scene.add(red, blue);
+    R.setPixelRatio(1); R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); cam.position.set(0, 1.9, 10.6); cam.lookAt(0, 1.3, 0);
+    R.render(scene, cam);
+    const c = document.createElement("canvas"); c.width = w; c.height = h; const x2 = c.getContext("2d"); x2.drawImage(R.domElement, 0, 0);
+    /* bordes fundidos: sin cortes rectos del lienzo */
+    x2.translate(w / 2, h * .45); x2.scale(1, 1.25); x2.globalCompositeOperation = "source-atop"; const dk = x2.createRadialGradient(0, 0, w * .26, 0, 0, w * .48); dk.addColorStop(0, "rgba(5,5,5,0)"); dk.addColorStop(1, "rgba(5,5,5,.9)"); x2.fillStyle = dk; x2.fillRect(-w, -h, w * 2, h * 2);
+    x2.globalCompositeOperation = "destination-in"; const rg = x2.createRadialGradient(0, 0, w * .3, 0, 0, w * .5); rg.addColorStop(0, "#000"); rg.addColorStop(1, "rgba(0,0,0,0)"); x2.fillStyle = rg; x2.fillRect(-w, -h, w * 2, h * 2);
+    scene.remove(red, blue); red.dispose(); blue.dispose(); keyL.intensity = kI; blockMat.color.setHex(bC);
+    R.setPixelRatio(pv.pr); e = pv.e; stage = pv.stage; apply();
+    if (host) size(); else { R.setSize(pv.sz.x, pv.sz.y, false); cam.aspect = pv.asp; cam.updateProjectionMatrix() }
+    return c;
+  },
   ready,
 };
 addEventListener("resize", () => size());
